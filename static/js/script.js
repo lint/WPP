@@ -1,18 +1,24 @@
 
 // define canvas variables
-let canvas = null;
-let ctx = null;
+let display_canvas = null;
+let display_ctx = null;
+let buffer_canvas = null;
+let buffer_ctx = null;
 
 // define sorting options
 let sort_horizontal = true;
 let sort_ascending = true;
 
+
 // execute when the document is ready
 document.addEventListener("DOMContentLoaded", function() { 
 
     // get the canvas and it's context
-    canvas = document.getElementById("canvas");
-    ctx = canvas.getContext("2d");
+    display_canvas = document.getElementById("canvas");
+    display_ctx = display_canvas.getContext("2d");
+
+    buffer_canvas = document.createElement("canvas");
+    buffer_ctx = buffer_canvas.getContext("2d");
 
     load_preset_image("/static/assets/img/rubiks_cube.png")
 
@@ -21,22 +27,37 @@ document.addEventListener("DOMContentLoaded", function() {
 
 
 // draw an image on the canvas
-function draw_image(img_url) {
+function draw_image(img_url, should_draw_display=true, should_draw_buffer=true) {
     let img = new Image();
     img.onload = function() {
 
-        // reset the canvas
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // get drawing dimensions
-        let scale = img.width > img.height ? canvas.width / img.width : canvas.height / img.height;
-        let width = img.width * scale;
-        let height = img.height * scale;
-        let offset_x = width < canvas.width ? (canvas.width - width) / 2 : 0;
-        let offset_y = height < canvas.height ? (canvas.height - height) / 2 : 0;
+        if (should_draw_display) {
 
-        // draw the image on the canvas
-        ctx.drawImage(img, offset_x, offset_y, width, height);
+            // reset the canvas
+            display_ctx.clearRect(0, 0, display_canvas.width, display_canvas.height);
+            
+            // get drawing dimensions
+            let scale = img.width > img.height ? display_canvas.width / img.width : display_canvas.height / img.height;
+            let width = img.width * scale;
+            let height = img.height * scale;
+            let offset_x = width < display_canvas.width ? (display_canvas.width - width) / 2 : 0;
+            let offset_y = height < display_canvas.height ? (display_canvas.height - height) / 2 : 0;
+            
+            // draw the image on the display canvas
+            display_ctx.drawImage(img, offset_x, offset_y, width, height);
+            
+        }
+
+        if (should_draw_buffer) {
+
+            // reset the canvas
+            buffer_ctx.clearRect(0, 0, buffer_canvas.width, buffer_canvas.height);
+
+            // draw the image on the buffer canvas
+            buffer_canvas.width = img.width;
+            buffer_canvas.height = img.height;
+            buffer_ctx.drawImage(img, 0, 0, buffer_canvas.width, buffer_canvas.height);
+        }
     };
     img.src = img_url;
 }
@@ -69,19 +90,19 @@ function submit_uploaded_image(event) {
 function handle_sort_pixels_button() {
 
     // get the data for each pixel of the image
-    let img_data = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    let img_data = buffer_ctx.getImageData(0, 0, buffer_canvas.width, buffer_canvas.height);
     let data = img_data.data;
 
     // sort in the horizontal direction
     if (sort_horizontal) {
 
         // iterate over every pixel pixels
-        for (let i = 0; i < canvas.height; i++) {
-            let offset = i * canvas.width;
+        for (let i = 0; i < buffer_canvas.height; i++) {
+            let offset = i * buffer_canvas.width;
             let buffer = []; // TODO: make reusable buffer?
 
             // extract horizontal rows of pixels
-            for (let j = 0; j < canvas.width; j++) {
+            for (let j = 0; j < buffer_canvas.width; j++) {
                 let pixel_index = (j + offset) * 4;
                 
                 // TODO: add directly instead of making new array for each pixel?
@@ -92,7 +113,7 @@ function handle_sort_pixels_button() {
             sort_pixel_buffer(buffer);
 
             // replace the image data with the sorted pixels
-            for (let j = 0; j < canvas.width; j++) {
+            for (let j = 0; j < buffer_canvas.width; j++) {
                 let pixel_index = (j + offset) * 4;
                 
                 data[pixel_index]   = buffer[j][0];
@@ -108,13 +129,13 @@ function handle_sort_pixels_button() {
     } else {
 
         // iterate over every pixel pixels
-        for (let i = 0; i < canvas.width; i++) {
+        for (let i = 0; i < buffer_canvas.width; i++) {
             let offset = i;
             let buffer = []; // TODO: make reusable buffer?
 
             // extract vertical rows of pixels
-            for (let j = 0; j < canvas.height; j++) {
-                let pixel_index = (j * canvas.width + offset) * 4;
+            for (let j = 0; j < buffer_canvas.height; j++) {
+                let pixel_index = (j * buffer_canvas.width + offset) * 4;
                 
                 // TODO: add directly instead of making new array for each pixel?
                 buffer.push(data.slice(pixel_index, pixel_index+5))
@@ -124,8 +145,8 @@ function handle_sort_pixels_button() {
             sort_pixel_buffer(buffer);
 
             // replace the image data with the sorted pixels
-            for (let j = 0; j < canvas.height; j++) {
-                let pixel_index = (j * canvas.width + offset) * 4;
+            for (let j = 0; j < buffer_canvas.height; j++) {
+                let pixel_index = (j * buffer_canvas.width + offset) * 4;
                 
                 data[pixel_index]   = buffer[j][0];
                 data[pixel_index+1] = buffer[j][1];
@@ -138,7 +159,10 @@ function handle_sort_pixels_button() {
     }
 
     // replace any changed pixels
-    ctx.putImageData(img_data, 0, 0);
+    buffer_ctx.putImageData(img_data, 0, 0);
+
+    // draw the buffer image on the display canvas
+    draw_image(buffer_canvas.toDataURL(), true, false);
 }
 
 
