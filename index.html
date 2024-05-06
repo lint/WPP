@@ -9,13 +9,39 @@
     <div id="page">
         <div id="sidebar">
             
-            <div>
+            <div class="options-category-container">
                 <div>Upload Image:</div>
                 <div>
                   <input id="upload-image-input" type="file" accept="image/*" onchange="submit_uploaded_image(event)"/>
                 </div>
             </div>
-            <div>
+            <div class="options-category-container">
+                <span>Direction:</span>
+                <span class="options-input-container">
+                    <span class="options-short-group">
+                      <input type="radio" id="horizontal-input" name="direction-type" onchange="handle_direction_change(this)" checked>
+                      <label for="horizontal-input">Horizontal</label>
+                    </span>
+                    <span class="options-short-group">
+                      <input type="radio" id="vertical-input" name="direction-type" onchange="handle_direction_change(this)">
+                      <label for="vertical-input">Vertical</label>
+                    </span>
+                </span>
+            </div>
+            <div class="options-category-container">
+                <span>Order:</span>
+                <span class="options-input-container">
+                    <span class="options-short-group">
+                      <input type="radio" id="ascending-input" name="order-type" onchange="handle_order_change(this)" checked>
+                      <label for="ascending-input">Ascending</label>
+                    </span>
+                    <span class="options-short-group">
+                      <input type="radio" id="descending-input" name="order-type" onchange="handle_order_change(this)">
+                      <label for="descending-input">Descending</label>
+                    </span>
+                </span>
+            </div>
+            <div class="options-category-container">
                 <div>
                   <button onclick="handle_sort_pixels_button()">Sort Pixels</button>
                 </div>

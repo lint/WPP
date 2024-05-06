@@ -30,3 +30,15 @@ html, body {
 #canvas {
     border: solid 1px red;
 }
+
+.options-category-container {
+    margin: 5px 0 0 0;
+}
+
+.options-input-container {
+    padding: 2px 5px 0px 5px;
+}
+
+.options-short-group {
+    display: inline-block;
+}

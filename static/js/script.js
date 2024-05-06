@@ -5,7 +5,7 @@ let ctx = null;
 
 // define sorting options
 let sort_horizontal = true;
-let sort_ascending = false;
+let sort_ascending = true;
 
 // execute when the document is ready
 document.addEventListener("DOMContentLoaded", function() { 
@@ -15,6 +15,8 @@ document.addEventListener("DOMContentLoaded", function() {
     ctx = canvas.getContext("2d");
 
     load_preset_image("/static/assets/img/rubiks_cube.png")
+
+    read_selected_inputs();
 });
 
 
@@ -187,5 +189,53 @@ function sort_pixel_buffer(buffer) {
 
         // replace the sorted range
         buffer.splice(range.start, range.end-range.start, ...to_sort);
+    }
+}
+
+
+// set sort vars based on currently selected form values
+function read_selected_inputs() {
+
+    // TODO: only really need to check one of each set
+
+    let horizontal_radio = document.getElementById("horizontal-input");
+    let vertical_radio = document.getElementById("vertical-input");
+    let ascending_radio = document.getElementById("ascending-input");
+    let descending_radio = document.getElementById("descending-input");
+
+    if (horizontal_radio.checked) {
+        sort_horizontal = true;
+    }
+    if (vertical_radio.checked) {
+        sort_horizontal = false;
+    }
+    if (ascending_radio.checked) {
+        sort_ascending = true;
+    }
+    if (descending_radio.checked) {
+        sort_ascending = false;
+    }
+
+}
+
+
+// handle direction input change
+function handle_direction_change(radio) {
+
+    if (radio.id === "horizontal-input") {
+        sort_horizontal = true;
+    } else if (radio.id === "vertical-input") {
+        sort_horizontal = false;
+    }
+}
+
+
+// handle order input change
+function handle_order_change(radio) {
+
+    if (radio.id === "ascending-input") {
+        sort_ascending = true;
+    } else if (radio.id === "descending-input") {
+        sort_ascending = false;
     }
 }
