@@ -1,12 +1,30 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>title</title>
+    <title>Pixel Sorter</title>
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
 
-    <div>test</div>
+    <div id="page">
+        <div id="sidebar">
+            
+            <div>
+                <div>Upload Image:</div>
+                <div>
+                  <input id="upload-image-input" type="file" accept="image/*" onchange="submit_uploaded_image(event)"/>
+                </div>
+            </div>
+
+        </div>
+        <div id="display">
+
+            <div id="canvas-container">
+                <canvas id="canvas" width="400" height="400"></canvas>
+            </div>
+
+        </div>
+    </div>
 
     <script type="text/javascript" src="/static/js/script.js"></script>
 </body>

@@ -1,6 +1,32 @@
 html, body {
     margin: 0;
     padding: 0;
+    height: 100%;
     font-family: sans-serif;
     font-size: 14px;
+}
+
+#page {
+    height: 100%;
+    display:grid;
+    grid-template-columns: 0.2fr 0.8fr;
+}
+
+#sidebar {
+    overflow-y: auto;
+    border-right: solid 2px #444;
+}
+
+#display {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+#canvas-container {
+    
+}
+
+#canvas {
+    border: solid 1px red;
 }
