@@ -61,11 +61,20 @@
                     </select>
                 </span>
             </div>
-            <div id="threshold-option-container" class="options-category-container">
-                <div id="threshold-title" class="subtitle">Threshold:</div>
-                <div id="threshold-slider-container" class="options-input-container">
-                    <div id="threshold-slider"></div>
+            <div class="options-category-container">
+                <div id="threshold-option-container">
+                    <div id="threshold-title" class="subtitle">Threshold:</div>
+                    <div id="threshold-slider-container" class="options-input-container">
+                        <div id="threshold-slider"></div>
+                    </div>
                 </div>
+                <div class="nested-options-category-container">
+                    <label for="invert-threshold-input">Invert:</label>
+                    <span class="options-short-group">
+                        <input type="checkbox" id="invert-threshold-input" name="invert-threshold" onchange="handle_threshold_invert_change(this)">
+                    </span>
+                </div>
+                
             </div>
             <div class="options-category-container">
                 <span class="subtitle">Apply to:</span>
@@ -82,7 +91,7 @@
             </div>
             <div class="options-category-container">
                 <div>
-                  <button onclick="handle_sort_pixels_button()">Sort Pixels</button>
+                  <button class="standard-button" onclick="handle_sort_pixels_button()">Sort Pixels</button>
                 </div>
             </div>
 

@@ -35,6 +35,10 @@ html, body {
     margin: 5px 10px 5px 10px;
 }
 
+.nested-options-category-container {
+    margin-left: 15px;    
+}
+
 .options-input-container {
     padding: 2px 5px 0px 5px;
 }
@@ -91,7 +95,7 @@ html, body {
 }
 
 .noUi-connect {
-    background-color: #2374ff;
+    background-color: white;
 }
 
 .noUi-tooltip {
@@ -140,4 +144,8 @@ input[type="file"] {
 .subsubtitle {
     font-size: 14px;
     font-weight: bold;
+}
+
+.highlight-color {
+    background-color: #2374ff;
 }

@@ -13,6 +13,7 @@ let sort_ascending = true;
 let sort_mode = "h";
 let sort_threshold_min = 30;
 let sort_threshold_max = 70;
+let sort_threshold_inverted = false;
 let use_hsl = false;
 let apply_to_uploaded = true;
 
@@ -75,7 +76,7 @@ function create_threshold_slider() {
         start: [30, 70],
         range: { min: [0], max: [100] },
         step: 1,
-        connect: [false, true, false],
+        connect: [true, true, true],
         tooltips: {
             to: (val) => val + "%"
         }
@@ -87,9 +88,26 @@ function create_threshold_slider() {
         sort_threshold_max = values[1];
     });
     
+    update_slider_connections();
+}
+
+
+// update the colors of the slider connections
+function update_slider_connections() {
     // color the different connections of the slider
-    let connect = slider.querySelector(".noUi-connect");
-    connect.classList.add("highlight-color");
+    let connects = document.getElementById("threshold-slider").querySelectorAll(".noUi-connect");
+
+    if (sort_threshold_inverted) {
+        connects[0].classList.add("highlight-color");
+        connects[1].classList.remove("highlight-color");
+        connects[2].classList.add("highlight-color");
+    } else {
+        connects[0].classList.remove("highlight-color");
+        connects[1].classList.add("highlight-color");
+        connects[2].classList.remove("highlight-color");
+    }
+
+    console.log(connects)
 }
 
 
@@ -249,7 +267,8 @@ function check_pixel_sortable(pixel) {
 
     sort_value *= 100;
 
-    return sort_value >= sort_threshold_min && sort_value <= sort_threshold_max;
+    return (!sort_threshold_inverted && sort_value >= sort_threshold_min && sort_value <= sort_threshold_max) 
+        || (sort_threshold_inverted && !(sort_value >= sort_threshold_min && sort_value <= sort_threshold_max));
 }
 
 
@@ -374,6 +393,13 @@ function handle_mode_change(mode_select) {
 // handle applied image input change
 function handle_image_applied(radio) {
     apply_to_uploaded = radio.id === "apply-uploaded-input";
+}
+
+
+// handle threshold invert button changed
+function handle_threshold_invert_change(checkbox) {
+    sort_threshold_inverted = checkbox.checked;
+    update_slider_connections();
 }
 
 
