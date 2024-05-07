@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function() {
     read_selected_inputs();
 
     // load a default image to display
-    load_preset_image("/static/assets/img/rubiks_cube.png")
+    load_preset_image("/static/assets/img/bricks.jpg")
 
     // create multi thumb threshold slider
     create_threshold_slider();
