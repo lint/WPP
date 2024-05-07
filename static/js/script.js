@@ -240,7 +240,7 @@ function handle_sort_pixels_button() {
     buffer_ctx.putImageData(img_data, 0, 0);
 
     // draw the buffer image on the display canvas
-    draw_image(buffer_canvas.toDataURL(), true, false);
+    draw_image(buffer_canvas.toDataURL(), true, true);
 }
 
 
@@ -398,6 +398,17 @@ function handle_image_applied(radio) {
 function handle_threshold_invert_change(checkbox) {
     sort_threshold_inverted = checkbox.checked;
     update_slider_connections();
+}
+
+
+// download the current image to file
+function handle_image_download() {
+    let a = document.createElement('a');
+    a.setAttribute("href", buffer_canvas.toDataURL());
+    a.setAttribute("download", "");
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
 }
 
 
