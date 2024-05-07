@@ -14,13 +14,16 @@
         <div id="sidebar">
             
             <div class="options-category-container">
-                <div>Upload Image:</div>
-                <div class="options-input-container">
+                <span class="subtitle">Upload Image:</span>
+                <span class="options-input-container">
+                    <label for="upload-image-input" class="standard-button">
+                        Browse...
+                    </label>
                   <input id="upload-image-input" type="file" accept="image/*" onchange="submit_uploaded_image(event)"/>
-                </div>
+                </span>
             </div>
             <div class="options-category-container">
-                <span>Direction:</span>
+                <span class="subtitle">Direction:</span>
                 <span class="options-input-container">
                     <span class="options-short-group">
                       <input type="radio" id="horizontal-input" name="direction-type" onchange="handle_direction_change(this)" checked>
@@ -33,7 +36,7 @@
                 </span>
             </div>
             <div class="options-category-container">
-                <span>Order:</span>
+                <span class="subtitle">Order:</span>
                 <span class="options-input-container">
                     <span class="options-short-group">
                       <input type="radio" id="ascending-input" name="order-type" onchange="handle_order_change(this)" checked>
@@ -46,8 +49,8 @@
                 </span>
             </div>
             <div class="options-category-container">
-                <div>Mode:</div>
-                <div class="options-input-container">
+                <span class="subtitle">Mode:</span>
+                <span class="options-input-container">
                     <select name="mode" id="mode-select-input" onchange="handle_mode_change(this)">
                         <option value="h">Hue</option>
                         <option value="s">Saturation</option>
@@ -56,18 +59,16 @@
                         <option value="g">Green</option>
                         <option value="b">Blue</option>
                     </select>
+                </span>
+            </div>
+            <div id="threshold-option-container" class="options-category-container">
+                <div id="threshold-title" class="subtitle">Threshold:</div>
+                <div id="threshold-slider-container" class="options-input-container">
+                    <div id="threshold-slider"></div>
                 </div>
             </div>
             <div class="options-category-container">
-                <div>Threshold:</div>
-                <div class="options-input-container">
-                    <div id="threshold-slider-container">
-                        <div id="threshold-slider"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="options-category-container">
-                <span>Apply to:</span>
+                <span class="subtitle">Apply to:</span>
                 <span class="options-input-container">
                     <span class="options-short-group">
                       <input type="radio" id="apply-current-input" name="image-applied-type" onchange="handle_image_applied(this)">

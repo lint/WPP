@@ -43,8 +43,20 @@ html, body {
     display: inline-block;
 }
 
+#threshold-option-container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    margin-top:20px;
+}
+
+#threshold-title {
+    flex-grow: 0;
+}
+
 #threshold-slider-container {
-    margin: 5px 0 5px 0;
+    flex-grow: 1;
+    flex-shrink: 0;
 }
 
 #threshold-slider {
@@ -85,4 +97,47 @@ html, body {
 .noUi-tooltip {
     border: none;
     background: none;
+}
+
+.noUi-horizontal .noUi-tooltip {
+    transform: translate(-50%, 25%);
+}
+
+input[type="file"] {
+    display: none;
+}
+  
+.standard-button {
+    background-color: #E9E9ED;
+    color: black;
+    border-radius: 4px;
+    cursor: pointer;
+    border: solid 1px #8f8f9d;
+    padding: 2px 4px 2px 4px;
+    text-align: center;
+}
+
+.standard-button:hover {
+    background-color: #D0D0D7;
+}
+
+.standard-button:active {
+    background-color: #B1B1B9;
+}
+
+.title {
+    color: #444;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.subtitle {
+    /* color: #444; */
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.subsubtitle {
+    font-size: 14px;
+    font-weight: bold;
 }
