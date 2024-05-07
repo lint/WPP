@@ -11,7 +11,7 @@
             
             <div class="options-category-container">
                 <div>Upload Image:</div>
-                <div>
+                <div class="options-input-container">
                   <input id="upload-image-input" type="file" accept="image/*" onchange="submit_uploaded_image(event)"/>
                 </div>
             </div>
@@ -40,6 +40,26 @@
                       <label for="descending-input">Descending</label>
                     </span>
                 </span>
+            </div>
+            <div class="options-category-container">
+                <div>Mode:</div>
+                <div class="options-input-container">
+                    <select name="mode" id="mode-select-input" onchange="handle_mode_change(this)">
+                        <option value="h">Hue</option>
+                        <option value="s">Saturation</option>
+                        <option value="l">Lightness</option>
+                        <option value="r">Red</option>
+                        <option value="g">Green</option>
+                        <option value="b">Blue</option>
+                    </select>
+                </div>
+            </div>
+            <div class="options-category-container">
+                <div>Threshold:</div>
+                <div class="options-input-container">
+                    <input type="range" id="threshold-input" name="threshold" min="0" max="100" step="1" value="50" onchange="handle_threshold_change(this)"/>
+                    <span id="threshold-value"></span>
+                </div>
             </div>
             <div class="options-category-container">
                 <div>

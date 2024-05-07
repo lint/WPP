@@ -8,7 +8,9 @@ let buffer_ctx = null;
 // define sorting options
 let sort_horizontal = true;
 let sort_ascending = true;
-
+let sort_mode = "h";
+let sort_threshold_min = 50;
+let use_hsl = false;
 
 // execute when the document is ready
 document.addEventListener("DOMContentLoaded", function() { 
@@ -25,6 +27,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // set variables based on currently selected inputs
     read_selected_inputs();
+
+    // allow continuous tracking of threshold slider value
+    let threshold_slider = document.getElementById("threshold-input")
+    threshold_slider.addEventListener("input", function() {
+        handle_threshold_change(threshold_slider);
+        update_threshold_display();
+    }); 
 });
 
 
@@ -108,7 +117,7 @@ function handle_sort_pixels_button() {
     let outer_length = sort_horizontal ? buffer_canvas.height : buffer_canvas.width;
     let inner_length = sort_horizontal ? buffer_canvas.width : buffer_canvas.height;
 
-    // iterate over every pixel pixels
+    // iterate over every pixel
     for (let i = 0; i < outer_length; i++) {
         let offset = offset_func(i);
         let buffer = []; // TODO: make reusable buffer?
@@ -118,7 +127,13 @@ function handle_sort_pixels_button() {
             let pixel_index = pixel_index_func(j, offset);
             
             // TODO: add directly instead of making new array for each pixel?
-            buffer.push(data.slice(pixel_index, pixel_index+5))
+            let pixel = data.slice(pixel_index, pixel_index+5)
+
+            if (use_hsl) {
+                pixel = rgba_to_hsla(pixel);
+            }
+
+            buffer.push(pixel);
         }
 
         // sort the pixels in the buffer
@@ -126,12 +141,17 @@ function handle_sort_pixels_button() {
 
         // replace the image data with the sorted pixels
         for (let j = 0; j < inner_length; j++) {
-            let pixel_index = pixel_index_func(j, offset);
+            let pixel = buffer[j];
+
+            if (use_hsl) {
+                pixel = hsla_to_rgba(pixel);
+            }
             
-            data[pixel_index]   = buffer[j][0];
-            data[pixel_index+1] = buffer[j][1];
-            data[pixel_index+2] = buffer[j][2];
-            data[pixel_index+3] = buffer[j][3];
+            let pixel_index = pixel_index_func(j, offset);
+            data[pixel_index]   = pixel[0];
+            data[pixel_index+1] = pixel[1];
+            data[pixel_index+2] = pixel[2];
+            data[pixel_index+3] = pixel[3];
         }
 
         buffer = [];
@@ -147,18 +167,46 @@ function handle_sort_pixels_button() {
 
 // check if pixel is sorting candidate
 function check_pixel_sortable(pixel) {
-    // return Math.random() > 0.5;
-    return true;
+    
+    let sort_value = -1;
+
+    if (sort_mode === "h") {
+        sort_value = pixel[0];
+    } else if (sort_mode === "s") {
+        sort_value = pixel[1];
+    } else if (sort_mode === "l") {
+        sort_value = pixel[2];
+    } else if (sort_mode === "r") {
+        sort_value = pixel[0] / 255;
+    } else if (sort_mode === "g") {
+        sort_value = pixel[1] / 255;
+    } else if (sort_mode === "b") {
+        sort_value = pixel[2] / 255;
+    }
+
+    sort_value *= 100;
+
+    return sort_value >= sort_threshold_min;
 }
 
 
 // overall comparison function to sort pixels
 let pixel_compare = function (a, b) {
-    if (sort_ascending) {
-        return a[0] - b[0];
-    } else {
-        return b[0] - a[0];
+    let result = 0;
+
+    if (sort_mode === "h" || sort_mode === "r") {
+        result = a[0] - b[0];
+    } else if (sort_mode === "s" || sort_mode === "g") {
+        result = a[1] - b[1];
+    } else if (sort_mode === "l" || sort_mode === "b") {
+        result = a[2] - b[2];
     }
+
+    if (!sort_ascending) {
+        result *= -1;
+    }
+
+    return result;
 };
 
 
@@ -205,6 +253,14 @@ function read_selected_inputs() {
     let vertical_radio = document.getElementById("vertical-input");
     let ascending_radio = document.getElementById("ascending-input");
     let descending_radio = document.getElementById("descending-input");
+    let mode_select = document.getElementById("mode-select-input");
+    let threshold_slider = document.getElementById("threshold-input");
+
+    sort_mode = mode_select.value;
+    use_hsl = sort_mode === "h" || sort_mode === "s" || sort_mode === "l";
+
+    sort_threshold_min = threshold_slider.value;
+    update_threshold_display();
 
     if (horizontal_radio.checked) {
         sort_horizontal = true;
@@ -240,4 +296,101 @@ function handle_order_change(radio) {
     } else if (radio.id === "descending-input") {
         sort_ascending = false;
     }
+}
+
+
+// handle mode input change
+function handle_mode_change(mode_select) {
+    sort_mode = mode_select.value;
+    use_hsl = sort_mode === "h" || sort_mode === "s" || sort_mode === "l";
+}
+
+
+// handle threshold input change
+function handle_threshold_change(slider) {
+    sort_threshold_min = slider.value;
+    update_threshold_display();
+}
+
+
+// update threshold value display
+function update_threshold_display() {
+    let threshold_element = document.getElementById("threshold-value");
+    threshold_element.innerHTML = sort_threshold_min + "%";
+}
+
+
+// convert rgb color to hsl
+function rgba_to_hsla(rgba) {
+    
+    let r = rgba[0] / 255;
+    let g = rgba[1] / 255;
+    let b = rgba[2] / 255;
+    let a = rgba[3];
+
+    let min = Math.min(r, g, b);
+    let max = Math.max(r, g, b);
+
+    let min_max_sum = min + max;
+    let min_max_diff = max - min;
+
+    let l = min_max_sum / 2;
+    let s = 0;
+    let h = 0;
+
+    if (max !== min) {
+        s = l > 0.5 ? min_max_diff / (2 - min_max_diff) : min_max_diff / min_max_sum;
+
+        switch (max) {
+            case r: h = (g - b) / min_max_diff + (g < b ? 6 : 0); break;
+            case g: h = (b - r) / min_max_diff + 2; break;
+            case b: h = (r - g) / min_max_diff + 4; break;
+        }
+
+        h /= 6;
+    }
+
+    // h = round(h * 360);
+    // s = round(s * 100);
+    // l = round(l * 100);
+
+    return [h, s, l, a];
+}
+
+
+// convert hue to rgb
+function hue_to_rgb(p, q, t) {
+    if (t < 0) { t += 1; }
+    if (t > 1) { t -= 1; }
+    if (t < 1 / 6) { return p + (q - p) * 6 * t; }
+    if (t < 1 / 2) { return q; }
+    if (t < 2 / 3) { return p + (q - p) * (2 / 3 - t) * 6; }
+    return p;
+}
+
+
+// convert hsl color to rgb
+function hsla_to_rgba(hsla) {
+
+    let h = hsla[0]; // / 360;
+    let s = hsla[1]; // / 100;
+    let l = hsla[2]; // / 100;
+    let a = hsla[3];
+
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    if (s === 0) {
+        r = g = b = l;
+    } else {
+
+        q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        p = 2 * l - q;
+        r = hue_to_rgb(p, q, h + 1 / 3);
+        g = hue_to_rgb(p, q, h);
+        b = hue_to_rgb(p, q, h - 1 / 3);
+    }
+
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a];
 }
