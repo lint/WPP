@@ -8,7 +8,7 @@ let buffer_ctx = null;
 let display_canvas_size_ratio = 0.7;
 
 // define sorting options
-let sort_horizontal = true;
+let sort_horizontal = false;
 let sort_ascending = true;
 let sort_mode = "h";
 let sort_threshold_min = 30;
@@ -33,14 +33,14 @@ document.addEventListener("DOMContentLoaded", function() {
     // fit the display canvas to the current window size
     update_display_canvas_size();
 
+    // create multi thumb threshold slider
+    create_threshold_slider();
+
     // set variables based on currently selected inputs
     read_selected_inputs();
 
     // load a default image to display
     load_preset_image("static/assets/img/bricks.jpg")
-
-    // create multi thumb threshold slider
-    create_threshold_slider();
 });
 
 
@@ -69,11 +69,11 @@ function update_display_canvas_size() {
 // create the multi thumb slider for threshold selection
 function create_threshold_slider() {
     
-    let slider = document.getElementById("threshold-slider");
+    let slider = document.getElementById("threshold-input");
 
     // create the noUiSlider 
     noUiSlider.create(slider, {
-        start: [30, 70],
+        start: [20, 80],
         range: { min: [0], max: [100] },
         step: 1,
         connect: [true, true, true],
@@ -94,8 +94,8 @@ function create_threshold_slider() {
 
 // update the colors of the slider connections
 function update_slider_connections() {
-    // color the different connections of the slider
-    let connects = document.getElementById("threshold-slider").querySelectorAll(".noUi-connect");
+    
+    let connects = document.getElementById("threshold-input").querySelectorAll(".noUi-connect");
 
     if (sort_threshold_inverted) {
         connects[0].classList.add("highlight-color");
@@ -106,8 +106,6 @@ function update_slider_connections() {
         connects[1].classList.add("highlight-color");
         connects[2].classList.remove("highlight-color");
     }
-
-    console.log(connects)
 }
 
 

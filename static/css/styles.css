@@ -64,13 +64,13 @@ html, body {
     padding-left: 15px;
 }
 
-#threshold-slider {
+#threshold-input {
     height: 10px;
     border: solid 1px gray;
     border-radius: 15px;
 }
 
-#threshold-slider .noUi-handle {
+#threshold-input .noUi-handle {
     height: 20px;
     width: 20px;
     /* top: -5px; */
@@ -82,16 +82,16 @@ html, body {
     box-shadow: 0px 1px 1px #8a8a8a;
 }
 
-#threshold-slider .noUi-handle:hover:enabled {
+#threshold-input .noUi-handle:hover:enabled {
     background: #484851;
 }
 
-#threshold-slider .noUi-handle:active:enabled {
+#threshold-input .noUi-handle:active:enabled {
     background: #2374ff;
 }
 
-#threshold-slider .noUi-handle::before,
-#threshold-slider .noUi-handle::after {
+#threshold-input .noUi-handle::before,
+#threshold-input .noUi-handle::after {
     display: none;
 }
 
