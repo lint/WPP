@@ -20,8 +20,10 @@ document.addEventListener("DOMContentLoaded", function() {
     buffer_canvas = document.createElement("canvas");
     buffer_ctx = buffer_canvas.getContext("2d");
 
+    // load a default image to display
     load_preset_image("/static/assets/img/rubiks_cube.png")
 
+    // set variables based on currently selected inputs
     read_selected_inputs();
 });
 
@@ -93,69 +95,46 @@ function handle_sort_pixels_button() {
     let img_data = buffer_ctx.getImageData(0, 0, buffer_canvas.width, buffer_canvas.height);
     let data = img_data.data;
 
-    // sort in the horizontal direction
-    if (sort_horizontal) {
+    // choose functions and loop lengths for horizontal vs vertical
+    let horz_offset_func = x => x * buffer_canvas.width;
+    let vert_offset_func = x => x;
 
-        // iterate over every pixel pixels
-        for (let i = 0; i < buffer_canvas.height; i++) {
-            let offset = i * buffer_canvas.width;
-            let buffer = []; // TODO: make reusable buffer?
+    let horz_pixel_index_func = (x, y) => (x + y) * 4;
+    let vert_pixel_index_func = (x, y) => (x * buffer_canvas.width + y) * 4;
 
-            // extract horizontal rows of pixels
-            for (let j = 0; j < buffer_canvas.width; j++) {
-                let pixel_index = (j + offset) * 4;
-                
-                // TODO: add directly instead of making new array for each pixel?
-                buffer.push(data.slice(pixel_index, pixel_index+5))
-            }
+    let offset_func = sort_horizontal ? horz_offset_func : vert_offset_func;
+    let pixel_index_func = sort_horizontal ? horz_pixel_index_func : vert_pixel_index_func;
 
-            // sort the pixels in the buffer
-            sort_pixel_buffer(buffer);
+    let outer_length = sort_horizontal ? buffer_canvas.height : buffer_canvas.width;
+    let inner_length = sort_horizontal ? buffer_canvas.width : buffer_canvas.height;
 
-            // replace the image data with the sorted pixels
-            for (let j = 0; j < buffer_canvas.width; j++) {
-                let pixel_index = (j + offset) * 4;
-                
-                data[pixel_index]   = buffer[j][0];
-                data[pixel_index+1] = buffer[j][1];
-                data[pixel_index+2] = buffer[j][2];
-                data[pixel_index+3] = buffer[j][3];
-            }
+    // iterate over every pixel pixels
+    for (let i = 0; i < outer_length; i++) {
+        let offset = offset_func(i);
+        let buffer = []; // TODO: make reusable buffer?
 
-            buffer = [];
+        // extract rows/cols of pixels
+        for (let j = 0; j < inner_length; j++) {
+            let pixel_index = pixel_index_func(j, offset);
+            
+            // TODO: add directly instead of making new array for each pixel?
+            buffer.push(data.slice(pixel_index, pixel_index+5))
         }
 
-    // sort in the vertical direction
-    } else {
+        // sort the pixels in the buffer
+        sort_pixel_buffer(buffer);
 
-        // iterate over every pixel pixels
-        for (let i = 0; i < buffer_canvas.width; i++) {
-            let offset = i;
-            let buffer = []; // TODO: make reusable buffer?
-
-            // extract vertical rows of pixels
-            for (let j = 0; j < buffer_canvas.height; j++) {
-                let pixel_index = (j * buffer_canvas.width + offset) * 4;
-                
-                // TODO: add directly instead of making new array for each pixel?
-                buffer.push(data.slice(pixel_index, pixel_index+5))
-            }
-
-            // sort the pixels in the buffer
-            sort_pixel_buffer(buffer);
-
-            // replace the image data with the sorted pixels
-            for (let j = 0; j < buffer_canvas.height; j++) {
-                let pixel_index = (j * buffer_canvas.width + offset) * 4;
-                
-                data[pixel_index]   = buffer[j][0];
-                data[pixel_index+1] = buffer[j][1];
-                data[pixel_index+2] = buffer[j][2];
-                data[pixel_index+3] = buffer[j][3];
-            }
-
-            buffer = [];
+        // replace the image data with the sorted pixels
+        for (let j = 0; j < inner_length; j++) {
+            let pixel_index = pixel_index_func(j, offset);
+            
+            data[pixel_index]   = buffer[j][0];
+            data[pixel_index+1] = buffer[j][1];
+            data[pixel_index+2] = buffer[j][2];
+            data[pixel_index+3] = buffer[j][3];
         }
+
+        buffer = [];
     }
 
     // replace any changed pixels
@@ -239,7 +218,6 @@ function read_selected_inputs() {
     if (descending_radio.checked) {
         sort_ascending = false;
     }
-
 }
 
 
