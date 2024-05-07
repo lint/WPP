@@ -5,12 +5,16 @@ let display_ctx = null;
 let buffer_canvas = null;
 let buffer_ctx = null;
 
+let display_canvas_size_ratio = 0.7;
+
 // define sorting options
 let sort_horizontal = true;
 let sort_ascending = true;
 let sort_mode = "h";
 let sort_threshold_min = 50;
 let use_hsl = false;
+
+let last_displayed_img_url = null;
 
 // execute when the document is ready
 document.addEventListener("DOMContentLoaded", function() { 
@@ -22,11 +26,14 @@ document.addEventListener("DOMContentLoaded", function() {
     buffer_canvas = document.createElement("canvas");
     buffer_ctx = buffer_canvas.getContext("2d");
 
-    // load a default image to display
-    load_preset_image("/static/assets/img/rubiks_cube.png")
+    // fit the display canvas to the current window size
+    update_display_canvas_size();
 
     // set variables based on currently selected inputs
     read_selected_inputs();
+
+    // load a default image to display
+    load_preset_image("/static/assets/img/rubiks_cube.png")
 
     // allow continuous tracking of threshold slider value
     let threshold_slider = document.getElementById("threshold-input")
@@ -37,12 +44,36 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
+// execute when the window is resized
+window.addEventListener("resize", function(event) {
+    
+    // update the canvas size and displayed image
+    update_display_canvas_size();
+    draw_image(last_displayed_img_url, true, false);
+
+}, true);
+
+
+// update the display canvas size based on the size of the window
+function update_display_canvas_size() {
+    let display_section = document.getElementById("display");
+    
+    let display_width = display_section.offsetWidth;
+    let display_height = display_section.offsetHeight;
+
+    display_canvas.width = display_width * display_canvas_size_ratio;
+    display_canvas.height = display_height * display_canvas_size_ratio;
+}
+
+
 // draw an image on the canvas
 function draw_image(img_url, should_draw_display=true, should_draw_buffer=true) {
     let img = new Image();
     img.onload = function() {
 
         if (should_draw_display) {
+
+            last_displayed_img_url = img_url;
 
             // reset the canvas
             display_ctx.clearRect(0, 0, display_canvas.width, display_canvas.height);
@@ -56,7 +87,6 @@ function draw_image(img_url, should_draw_display=true, should_draw_buffer=true) 
             
             // draw the image on the display canvas
             display_ctx.drawImage(img, offset_x, offset_y, width, height);
-            
         }
 
         if (should_draw_buffer) {

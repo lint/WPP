@@ -28,7 +28,7 @@ html, body {
 }
 
 #canvas {
-    border: solid 1px red;
+    /* border: solid 1px red; */
 }
 
 .options-category-container {
