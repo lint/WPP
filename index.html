@@ -2,7 +2,11 @@
 <html>
 <head>
     <title>Pixel Sorter</title>
+
+    <link rel="stylesheet" href="/static/vendor/nouislider@15.7.1/nouislider.min.css">
     <link rel="stylesheet" href="/static/css/styles.css">
+
+    <script type="text/javascript" src="/static/vendor/nouislider@15.7.1/nouislider.min.js"></script>
 </head>
 <body>
 
@@ -57,8 +61,9 @@
             <div class="options-category-container">
                 <div>Threshold:</div>
                 <div class="options-input-container">
-                    <input type="range" id="threshold-input" name="threshold" min="0" max="100" step="1" value="50" onchange="handle_threshold_change(this)"/>
-                    <span id="threshold-value"></span>
+                    <div id="threshold-slider-container">
+                        <div id="threshold-slider"></div>
+                    </div>
                 </div>
             </div>
             <div class="options-category-container">

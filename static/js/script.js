@@ -11,7 +11,8 @@ let display_canvas_size_ratio = 0.7;
 let sort_horizontal = true;
 let sort_ascending = true;
 let sort_mode = "h";
-let sort_threshold_min = 50;
+let sort_threshold_min = 30;
+let sort_threshold_max = 70;
 let use_hsl = false;
 let apply_to_uploaded = true;
 
@@ -37,12 +38,8 @@ document.addEventListener("DOMContentLoaded", function() {
     // load a default image to display
     load_preset_image("/static/assets/img/rubiks_cube.png")
 
-    // allow continuous tracking of threshold slider value
-    let threshold_slider = document.getElementById("threshold-input")
-    threshold_slider.addEventListener("input", function() {
-        handle_threshold_change(threshold_slider);
-        update_threshold_display();
-    }); 
+    // create multi thumb threshold slider
+    create_threshold_slider();
 });
 
 
@@ -65,6 +62,34 @@ function update_display_canvas_size() {
 
     display_canvas.width = display_width * display_canvas_size_ratio;
     display_canvas.height = display_height * display_canvas_size_ratio;
+}
+
+
+// create the multi thumb slider for threshold selection
+function create_threshold_slider() {
+    
+    let slider = document.getElementById("threshold-slider");
+
+    // create the noUiSlider 
+    noUiSlider.create(slider, {
+        start: [30, 70],
+        range: { min: [0], max: [100] },
+        step: 1,
+        connect: [false, true, false],
+        tooltips: {
+            to: (val) => val + "%"
+        }
+    });
+
+    // update display and current congestion values whenver a value has changed
+    slider.noUiSlider.on("update", function (values, handle) {
+        sort_threshold_min = values[0];
+        sort_threshold_max = values[1];
+    });
+    
+    // color the different connections of the slider
+    let connect = slider.querySelector(".noUi-connect");
+    connect.classList.add("highlight-color");
 }
 
 
@@ -224,7 +249,7 @@ function check_pixel_sortable(pixel) {
 
     sort_value *= 100;
 
-    return sort_value >= sort_threshold_min;
+    return sort_value >= sort_threshold_min && sort_value <= sort_threshold_max;
 }
 
 
@@ -292,13 +317,9 @@ function read_selected_inputs() {
     let ascending_radio = document.getElementById("ascending-input");
     let descending_radio = document.getElementById("descending-input");
     let mode_select = document.getElementById("mode-select-input");
-    let threshold_slider = document.getElementById("threshold-input");
 
     sort_mode = mode_select.value;
     use_hsl = sort_mode === "h" || sort_mode === "s" || sort_mode === "l";
-
-    sort_threshold_min = threshold_slider.value;
-    update_threshold_display();
 
     if (horizontal_radio.checked) {
         sort_horizontal = true;
@@ -341,20 +362,6 @@ function handle_order_change(radio) {
 function handle_mode_change(mode_select) {
     sort_mode = mode_select.value;
     use_hsl = sort_mode === "h" || sort_mode === "s" || sort_mode === "l";
-}
-
-
-// handle threshold input change
-function handle_threshold_change(slider) {
-    sort_threshold_min = slider.value;
-    update_threshold_display();
-}
-
-
-// update threshold value display
-function update_threshold_display() {
-    let threshold_element = document.getElementById("threshold-value");
-    threshold_element.innerHTML = sort_threshold_min + "%";
 }
 
 

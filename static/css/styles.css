@@ -42,3 +42,47 @@ html, body {
 .options-short-group {
     display: inline-block;
 }
+
+#threshold-slider-container {
+    margin: 5px 0 5px 0;
+}
+
+#threshold-slider {
+    height: 10px;
+    border: solid 1px gray;
+    border-radius: 15px;
+}
+
+#threshold-slider .noUi-handle {
+    height: 20px;
+    width: 20px;
+    /* top: -5px; */
+    right: -10px;
+    border-radius: 10px;
+    border: solid 2px white;
+    padding: 2px;
+    background: gray;
+    box-shadow: 0px 1px 1px #8a8a8a;
+}
+
+#threshold-slider .noUi-handle:hover:enabled {
+    background: #484851;
+}
+
+#threshold-slider .noUi-handle:active:enabled {
+    background: #2374ff;
+}
+
+#threshold-slider .noUi-handle::before,
+#threshold-slider .noUi-handle::after {
+    display: none;
+}
+
+.noUi-connect {
+    background-color: #2374ff;
+}
+
+.noUi-tooltip {
+    border: none;
+    background: none;
+}
