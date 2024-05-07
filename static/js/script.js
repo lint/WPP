@@ -13,7 +13,9 @@ let sort_ascending = true;
 let sort_mode = "h";
 let sort_threshold_min = 50;
 let use_hsl = false;
+let apply_to_uploaded = true;
 
+let uploaded_img_url = null;
 let last_displayed_img_url = null;
 
 // execute when the document is ready
@@ -110,7 +112,8 @@ function load_preset_image(img_fn) {
     fetch(img_fn)
     .then(res => res.blob())
     .then(blob => {
-        draw_image(URL.createObjectURL(blob));
+        uploaded_img_url = URL.createObjectURL(blob);
+        draw_image(uploaded_img_url);
     });
 }
 
@@ -121,7 +124,8 @@ function submit_uploaded_image(event) {
     let input = event.target;
     let reader = new FileReader();
     reader.onload = function () {
-        draw_image(reader.result);
+        uploaded_img_url = reader.result;
+        draw_image(uploaded_img_url);
     };
     reader.readAsDataURL(input.files[0]);
 }
@@ -129,6 +133,10 @@ function submit_uploaded_image(event) {
 
 // handler for the sort button being pressed
 function handle_sort_pixels_button() {
+
+    if (apply_to_uploaded) {
+        draw_image(uploaded_img_url, false, true);
+    }
 
     // get the data for each pixel of the image
     let img_data = buffer_ctx.getImageData(0, 0, buffer_canvas.width, buffer_canvas.height);
@@ -347,6 +355,12 @@ function handle_threshold_change(slider) {
 function update_threshold_display() {
     let threshold_element = document.getElementById("threshold-value");
     threshold_element.innerHTML = sort_threshold_min + "%";
+}
+
+
+// handle applied image input change
+function handle_image_applied(radio) {
+    apply_to_uploaded = radio.id === "apply-uploaded-input";
 }
 
 

@@ -62,6 +62,19 @@
                 </div>
             </div>
             <div class="options-category-container">
+                <span>Apply to:</span>
+                <span class="options-input-container">
+                    <span class="options-short-group">
+                      <input type="radio" id="apply-current-input" name="image-applied-type" onchange="handle_image_applied(this)">
+                      <label for="apply-current-input">Current image</label>
+                    </span>
+                    <span class="options-short-group">
+                      <input type="radio" id="apply-uploaded-input" name="image-applied-type" onchange="handle_image_applied(this)" checked>
+                      <label for="apply-uploaded-input">Uploaded image</label>
+                    </span>
+                </span>
+            </div>
+            <div class="options-category-container">
                 <div>
                   <button onclick="handle_sort_pixels_button()">Sort Pixels</button>
                 </div>
