@@ -51,7 +51,6 @@ html, body {
     display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
-    margin-top:20px;
 }
 
 #threshold-title {
@@ -61,6 +60,8 @@ html, body {
 #threshold-slider-container {
     flex-grow: 1;
     flex-shrink: 0;
+    transform: translate(0, 12%);
+    padding-left: 15px;
 }
 
 #threshold-slider {
@@ -104,7 +105,7 @@ html, body {
 }
 
 .noUi-horizontal .noUi-tooltip {
-    transform: translate(-50%, 25%);
+    transform: translate(-50%, 165%);
 }
 
 input[type="file"] {
