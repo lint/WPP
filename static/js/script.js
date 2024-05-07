@@ -187,13 +187,17 @@ function handle_sort_pixels_button() {
 
         // extract rows/cols of pixels
         for (let j = 0; j < inner_length; j++) {
-            let pixel_index = pixel_index_func(j, offset);
+            let data_index = pixel_index_func(j, offset);
             
-            // TODO: add directly instead of making new array for each pixel?
-            let pixel = data.slice(pixel_index, pixel_index+5)
+            let pixel = {
+                r: data[data_index],
+                g: data[data_index+1], 
+                b: data[data_index+2],
+                a: data[data_index+3]
+            };
 
             if (use_hsl) {
-                pixel = rgba_to_hsla(pixel);
+                add_hsl_to_pixel(pixel);
             }
 
             buffer.push(pixel);
@@ -205,16 +209,12 @@ function handle_sort_pixels_button() {
         // replace the image data with the sorted pixels
         for (let j = 0; j < inner_length; j++) {
             let pixel = buffer[j];
-
-            if (use_hsl) {
-                pixel = hsla_to_rgba(pixel);
-            }
+            let data_index = pixel_index_func(j, offset);
             
-            let pixel_index = pixel_index_func(j, offset);
-            data[pixel_index]   = pixel[0];
-            data[pixel_index+1] = pixel[1];
-            data[pixel_index+2] = pixel[2];
-            data[pixel_index+3] = pixel[3];
+            data[data_index]   = pixel.r;
+            data[data_index+1] = pixel.g;
+            data[data_index+2] = pixel.b;
+            data[data_index+3] = pixel.a;
         }
 
         buffer = [];
@@ -234,17 +234,17 @@ function check_pixel_sortable(pixel) {
     let sort_value = -1;
 
     if (sort_mode === "h") {
-        sort_value = pixel[0];
+        sort_value = pixel.h;
     } else if (sort_mode === "s") {
-        sort_value = pixel[1];
+        sort_value = pixel.s;
     } else if (sort_mode === "l") {
-        sort_value = pixel[2];
+        sort_value = pixel.l;
     } else if (sort_mode === "r") {
-        sort_value = pixel[0] / 255;
+        sort_value = pixel.r / 255;
     } else if (sort_mode === "g") {
-        sort_value = pixel[1] / 255;
+        sort_value = pixel.g / 255;
     } else if (sort_mode === "b") {
-        sort_value = pixel[2] / 255;
+        sort_value = pixel.b / 255;
     }
 
     sort_value *= 100;
@@ -257,12 +257,18 @@ function check_pixel_sortable(pixel) {
 let pixel_compare = function (a, b) {
     let result = 0;
 
-    if (sort_mode === "h" || sort_mode === "r") {
-        result = a[0] - b[0];
-    } else if (sort_mode === "s" || sort_mode === "g") {
-        result = a[1] - b[1];
-    } else if (sort_mode === "l" || sort_mode === "b") {
-        result = a[2] - b[2];
+    if (sort_mode === "h") {
+        result = a.h - b.h;
+    } else if (sort_mode === "s") {
+        result = a.s - b.s;
+    } else if (sort_mode === "l") {
+        result = a.l - b.l;
+    } else if (sort_mode === "r") {
+        result = a.r - b.r;
+    } else if (sort_mode === "g") {
+        result = a.g - b.g;
+    } else if (sort_mode === "b") {
+        result = a.b - b.b;
     }
 
     if (!sort_ascending) {
@@ -371,13 +377,12 @@ function handle_image_applied(radio) {
 }
 
 
-// convert rgb color to hsl
-function rgba_to_hsla(rgba) {
+// add HSL colorspace information to a given pixel object
+function add_hsl_to_pixel(pixel) {
     
-    let r = rgba[0] / 255;
-    let g = rgba[1] / 255;
-    let b = rgba[2] / 255;
-    let a = rgba[3];
+    let r = pixel.r / 255;
+    let g = pixel.g / 255;
+    let b = pixel.b / 255;
 
     let min = Math.min(r, g, b);
     let max = Math.max(r, g, b);
@@ -405,43 +410,7 @@ function rgba_to_hsla(rgba) {
     // s = round(s * 100);
     // l = round(l * 100);
 
-    return [h, s, l, a];
-}
-
-
-// convert hue to rgb
-function hue_to_rgb(p, q, t) {
-    if (t < 0) { t += 1; }
-    if (t > 1) { t -= 1; }
-    if (t < 1 / 6) { return p + (q - p) * 6 * t; }
-    if (t < 1 / 2) { return q; }
-    if (t < 2 / 3) { return p + (q - p) * (2 / 3 - t) * 6; }
-    return p;
-}
-
-
-// convert hsl color to rgb
-function hsla_to_rgba(hsla) {
-
-    let h = hsla[0]; // / 360;
-    let s = hsla[1]; // / 100;
-    let l = hsla[2]; // / 100;
-    let a = hsla[3];
-
-    let r = 0;
-    let g = 0;
-    let b = 0;
-
-    if (s === 0) {
-        r = g = b = l;
-    } else {
-
-        q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-        p = 2 * l - q;
-        r = hue_to_rgb(p, q, h + 1 / 3);
-        g = hue_to_rgb(p, q, h);
-        b = hue_to_rgb(p, q, h - 1 / 3);
-    }
-
-    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255), a];
+    pixel.h = h;
+    pixel.s = s;
+    pixel.l = l;
 }
