@@ -49,7 +49,7 @@ window.addEventListener("resize", function(event) {
     
     // update the canvas size and displayed image
     update_display_canvas_size();
-    draw_image(last_displayed_img_url, true, false);
+    draw_display();
 
 }, true);
 
@@ -109,41 +109,55 @@ function update_slider_connections() {
 }
 
 
+// copy the buffer canvas to the display canvas
+function draw_display() {
+
+    // reset the canvas
+    display_ctx.clearRect(0, 0, display_canvas.width, display_canvas.height);
+    
+    // get drawing dimensions
+    let scale = buffer_canvas.width > buffer_canvas.height ? display_canvas.width / buffer_canvas.width : display_canvas.height / buffer_canvas.height;
+    let width = buffer_canvas.width * scale;
+    let height = buffer_canvas.height * scale;
+    let offset_x = width < display_canvas.width ? (display_canvas.width - width) / 2 : 0;
+    let offset_y = height < display_canvas.height ? (display_canvas.height - height) / 2 : 0;
+    
+    // draw the image on the display canvas
+    display_ctx.drawImage(buffer_canvas, offset_x, offset_y, width, height);
+}
+
+
 // draw an image on the canvas
-function draw_image(img_url, should_draw_display=true, should_draw_buffer=true) {
-    let img = new Image();
-    img.onload = function() {
+async function draw_image(img_url, should_draw_display=true, should_draw_buffer=true) {
 
-        if (should_draw_display) {
+    // draw the image to the buffer 
+    if (should_draw_buffer) {
+        let load_image = src =>
+        new Promise((resolve, reject) => {
+            let img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = src;
+        });
 
-            last_displayed_img_url = img_url;
+        await load_image(img_url).then(img => {
+        
+            if (should_draw_buffer) {
+                // reset the canvas
+                buffer_ctx.clearRect(0, 0, buffer_canvas.width, buffer_canvas.height);
 
-            // reset the canvas
-            display_ctx.clearRect(0, 0, display_canvas.width, display_canvas.height);
-            
-            // get drawing dimensions
-            let scale = img.width > img.height ? display_canvas.width / img.width : display_canvas.height / img.height;
-            let width = img.width * scale;
-            let height = img.height * scale;
-            let offset_x = width < display_canvas.width ? (display_canvas.width - width) / 2 : 0;
-            let offset_y = height < display_canvas.height ? (display_canvas.height - height) / 2 : 0;
-            
-            // draw the image on the display canvas
-            display_ctx.drawImage(img, offset_x, offset_y, width, height);
-        }
+                // draw the image on the buffer canvas
+                buffer_canvas.width = img.width;
+                buffer_canvas.height = img.height;
+                buffer_ctx.drawImage(img, 0, 0, buffer_canvas.width, buffer_canvas.height);
+            }
+        });
+    }
 
-        if (should_draw_buffer) {
-
-            // reset the canvas
-            buffer_ctx.clearRect(0, 0, buffer_canvas.width, buffer_canvas.height);
-
-            // draw the image on the buffer canvas
-            buffer_canvas.width = img.width;
-            buffer_canvas.height = img.height;
-            buffer_ctx.drawImage(img, 0, 0, buffer_canvas.width, buffer_canvas.height);
-        }
-    };
-    img.src = img_url;
+    // copy the current buffer to the display
+    if (should_draw_display) {
+        draw_display();
+    }
 }
 
 
@@ -173,10 +187,10 @@ function submit_uploaded_image(event) {
 
 
 // handler for the sort button being pressed
-function handle_sort_pixels_button() {
+async function handle_sort_pixels_button() {
 
     if (apply_to_uploaded) {
-        draw_image(uploaded_img_url, false, true);
+        await draw_image(uploaded_img_url, false, true);
     }
 
     // get the data for each pixel of the image
@@ -240,7 +254,7 @@ function handle_sort_pixels_button() {
     buffer_ctx.putImageData(img_data, 0, 0);
 
     // draw the buffer image on the display canvas
-    draw_image(buffer_canvas.toDataURL(), true, true);
+    draw_display();
 }
 
 
@@ -333,29 +347,17 @@ function sort_pixel_buffer(buffer) {
 // set sort vars based on currently selected form values
 function read_selected_inputs() {
 
-    // TODO: only really need to check one of each set
-
     let horizontal_radio = document.getElementById("horizontal-input");
-    let vertical_radio = document.getElementById("vertical-input");
     let ascending_radio = document.getElementById("ascending-input");
-    let descending_radio = document.getElementById("descending-input");
     let mode_select = document.getElementById("mode-select-input");
+    let apply_to_radio = document.getElementById("apply-uploaded-input");
 
     sort_mode = mode_select.value;
     use_hsl = sort_mode === "h" || sort_mode === "s" || sort_mode === "l";
 
-    if (horizontal_radio.checked) {
-        sort_horizontal = true;
-    }
-    if (vertical_radio.checked) {
-        sort_horizontal = false;
-    }
-    if (ascending_radio.checked) {
-        sort_ascending = true;
-    }
-    if (descending_radio.checked) {
-        sort_ascending = false;
-    }
+    sort_horizontal = horizontal_radio.checked;
+    sort_ascending = ascending_radio.checked;
+    apply_to_uploaded = apply_to_radio.checked;
 }
 
 
@@ -403,12 +405,15 @@ function handle_threshold_invert_change(checkbox) {
 
 // download the current image to file
 function handle_image_download() {
-    let a = document.createElement('a');
-    a.setAttribute("href", buffer_canvas.toDataURL());
-    a.setAttribute("download", "");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    buffer_canvas.toBlob(function(blob) {
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.setAttribute("href", url);
+        a.setAttribute("download", "");
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    });
 }
 
 
