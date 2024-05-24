@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pixel Sorter</title>
+
+    <link rel="stylesheet" href="../../common/vendor/nouislider@15.7.1/nouislider.min.css">
+    <link rel="stylesheet" href="static/css/styles.css">
+
+    <script type="text/javascript" src="../../common/vendor/nouislider@15.7.1/nouislider.min.js"></script>
+</head>
+<body>
+
+    <div id="page">
+        <div id="sidebar">
+            
+            <div class="options-category-container">
+                <span class="subtitle">Upload Image:</span>
+                <span class="options-input-container">
+                    <label for="upload-image-input" class="standard-button">
+                        Browse...
+                    </label>
+                  <input id="upload-image-input" type="file" accept="image/*" onchange="submit_uploaded_image(event)"/>
+                </span>
+            </div>
+            <div class="options-category-container">
+                <span class="subtitle">Direction:</span>
+                <span class="options-input-container">
+                    <span class="options-short-group">
+                      <input type="radio" id="horizontal-input" name="direction-type" onchange="handle_direction_change(this)">
+                      <label for="horizontal-input">Horizontal</label>
+                    </span>
+                    <span class="options-short-group">
+                      <input type="radio" id="vertical-input" name="direction-type" onchange="handle_direction_change(this)" checked>
+                      <label for="vertical-input">Vertical</label>
+                    </span>
+                </span>
+            </div>
+            <div class="options-category-container">
+                <span class="subtitle">Order:</span>
+                <span class="options-input-container">
+                    <span class="options-short-group">
+                      <input type="radio" id="ascending-input" name="order-type" onchange="handle_order_change(this)" checked>
+                      <label for="ascending-input">Ascending</label>
+                    </span>
+                    <span class="options-short-group">
+                      <input type="radio" id="descending-input" name="order-type" onchange="handle_order_change(this)">
+                      <label for="descending-input">Descending</label>
+                    </span>
+                </span>
+            </div>
+            <div class="options-category-container">
+                <span class="subtitle">Mode:</span>
+                <span class="options-input-container">
+                    <select name="mode" id="mode-select-input" onchange="handle_mode_change(this)">
+                        <option value="r">Red</option>
+                        <option value="g">Green</option>
+                        <option value="b">Blue</option>
+                        <option value="h">Hue</option>
+                        <option value="s">Saturation</option>
+                        <option value="l">Lightness</option>
+                    </select>
+                </span>
+            </div>
+            <div class="options-category-container">
+                <div id="threshold-option-container">
+                    <div id="threshold-title" class="subtitle">Threshold:</div>
+                    <div id="threshold-slider-container" class="options-input-container">
+                        <div id="threshold-input"></div>
+                    </div>
+                </div>
+                <div class="nested-options-category-container">
+                    <label for="invert-threshold-input">Invert:</label>
+                    <span class="options-short-group">
+                        <input type="checkbox" id="invert-threshold-input" name="invert-threshold" onchange="handle_threshold_invert_change(this)">
+                    </span>
+                </div>
+                
+            </div>
+            <div class="options-category-container">
+                <span class="subtitle">Apply to:</span>
+                <span class="options-input-container">
+                    <span class="options-short-group">
+                      <input type="radio" id="apply-current-input" name="image-applied-type" onchange="handle_image_applied(this)">
+                      <label for="apply-current-input">Current image</label>
+                    </span>
+                    <span class="options-short-group">
+                      <input type="radio" id="apply-uploaded-input" name="image-applied-type" onchange="handle_image_applied(this)" checked>
+                      <label for="apply-uploaded-input">Uploaded image</label>
+                    </span>
+                </span>
+            </div>
+            <div class="options-category-container">
+                <div>
+                  <button class="standard-button" onclick="handle_sort_pixels_button()">Sort Pixels</button>
+                </div>
+            </div>
+            <div class="options-category-container">
+                <div>
+                  <button class="standard-button" onclick="handle_image_download()">Save Image</button>
+                </div>
+            </div>
+
+        </div>
+        <div id="display">
+
+            <div id="canvas-container">
+                <canvas id="canvas" width="400" height="400"></canvas>
+            </div>
+
+        </div>
+    </div>
+
+    <script type="text/javascript" src="static/js/script.js"></script>
+</body>
+</html>
+
