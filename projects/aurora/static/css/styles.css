@@ -20,4 +20,6 @@ html, body {
     background-color: black;
     /* border: solid 2px red; */
     /* box-sizing: border-box; */
+    height: 100%;
+    width: 100%;
 }
