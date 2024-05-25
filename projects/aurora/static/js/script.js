@@ -52,9 +52,11 @@ let cols = [{
 
 
 // callback for when DOM is loaded
-document.addEventListener("DOMContentLoaded", function() { 
+// document.addEventListener("DOMContentLoaded", function() { 
+function main() {
 
-    console.log("DOM loaded")
+    console.log("main - start");
+
     // setup the stage
     // create_stage();
 
@@ -68,8 +70,8 @@ document.addEventListener("DOMContentLoaded", function() {
     create_auroras();
     animate(0);
 
-    console.log("main end")
-});
+    console.log("main - end");
+};
 
 
 // execute when the window is resized
@@ -93,7 +95,7 @@ function create_display() {
     let container = document.getElementById("stage-container");
 
     console.log("initial container size: width: ", container.offsetWidth, "height: ", container.offsetHeight);
-    
+
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
     
@@ -557,3 +559,6 @@ function set_gradient(geometry, colors, axis, reverse) {
 
 //     return result;
 // }
+
+// call the main function
+main();
