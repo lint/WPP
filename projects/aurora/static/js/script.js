@@ -28,26 +28,30 @@ let num_points_per_aurora = 250;
 let aurora_scale_inner = 10;
 let aurora_scale_outer = 1;
 let aurora_width = 0.5;
-
-// aurora coordinate positioning
-let x_start = -15;
-let x_end = 15;
-let y_start = 8;
-let y_end = 12;
-let z_start = -30;
-let z_end = 30;
+let aurora_placement_bound1 = {x:-15, y:8, z:-30};
+let aurora_placement_bound2 = {x:15, y:12, z:30};
 
 // rock settings
-let num_rocks = 100;
+let num_rocks = 150;
 let rock_min_size = 0.05;
 let rock_max_size = 0.15;
-let rock_placement_bound1 = {x:-50, y: 0, z:-50};
-let rock_placement_bound2 = {x:50, y:0, z:50};
+let rock_placement_bound1 = {x:-25, y: 0, z:-25};
+let rock_placement_bound2 = {x:25, y:0, z:25};
+
+// star settings
+let num_stars = 500;
+let star_min_size = 0.2;
+let star_max_size = 0.4;
+let star_exclusion_bound1 = {x:-150, y:0, z:-150};
+let star_exclusion_bound2 = {x:150, y:300, z:150};
+let star_inclusion_bound1 = {x:-250, y:0, z:-250};
+let star_inclusion_bound2 = {x:250, y:400, z:250};
 
 // color variables
 let sky_color = 0x0c1b2e;
 let ground_color = 0x574032;
 let rock_color = 0x444444;
+let star_color = 0xFFFFFF;
 
 // movement control variables for PointerLockControls
 let key_map = {};
@@ -62,12 +66,18 @@ document.addEventListener("keyup", on_key, false);
 function main() {
     setup_noise();
     create_display();
-    create_auroras();
-    create_terrain();
-    create_rocks();
+    create_scene_objects();
     animate(0);
 };
 
+
+// create the scene objects
+function create_scene_objects() {
+    create_auroras();
+    create_terrain();
+    create_rocks();
+    create_stars();
+}
 
 // execute when the window is resized
 // window.addEventListener("resize", function(event) {
@@ -162,11 +172,11 @@ function calc_aurora_parts(origin_ratio, offset) {
 
 
     // calculate point coordinate information based on provided variables
-    let x_origin = origin_ratio * Math.abs(x_end - x_start) + x_start;
-    let z_dist = Math.abs(z_end - z_start);
+    let x_origin = origin_ratio * Math.abs(aurora_placement_bound2.x - aurora_placement_bound1.x) + aurora_placement_bound1.x;
+    let z_dist = Math.abs(aurora_placement_bound2.z - aurora_placement_bound1.z);
 
     // calculate coordinates for first point
-    let z_prev = z_start;
+    let z_prev = aurora_placement_bound1.z;
     let noise_val = get_noise(x_origin, z_prev, offset);
     let x_prev = x_origin + noise_val;
 
@@ -177,21 +187,21 @@ function calc_aurora_parts(origin_ratio, offset) {
     let x_right = x_prev + prev_width_half;
 
     // back triangle 1
-    points.push(x_left, y_start, z_prev);
-    points.push(x_left, y_end, z_prev);
-    points.push(x_right, y_start, z_prev);
+    points.push(x_left, aurora_placement_bound1.y, z_prev);
+    points.push(x_left, aurora_placement_bound2.y, z_prev);
+    points.push(x_right, aurora_placement_bound1.y, z_prev);
     colors.push(0,1,0,1, 1,1,1,0, 0,1,0,1);
 
     // back triangle 2
-    points.push(x_right, y_start, z_prev);
-    points.push(x_left, y_end, z_prev);
-    points.push(x_right, y_end, z_prev);
+    points.push(x_right, aurora_placement_bound1.y, z_prev);
+    points.push(x_left, aurora_placement_bound2.y, z_prev);
+    points.push(x_right, aurora_placement_bound2.y, z_prev);
     colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
 
     // calculate coordinates for every other point
     for (let i = 1; i < num_points_per_aurora; i++) {
 
-        let z_next = (i / num_points_per_aurora) * z_dist + z_start;
+        let z_next = (i / num_points_per_aurora) * z_dist + aurora_placement_bound1.z;
         let noise_val = get_noise(x_origin, z_next, offset);
         let x_next = x_origin + noise_val;
 
@@ -205,51 +215,51 @@ function calc_aurora_parts(origin_ratio, offset) {
 
         // calculate faces
         // left triangle 1 
-        points.push(x_prev_left, y_start, z_prev);
-        points.push(x_next_left, y_start, z_next);
-        points.push(x_next_left, y_end, z_next);
+        points.push(x_prev_left, aurora_placement_bound1.y, z_prev);
+        points.push(x_next_left, aurora_placement_bound1.y, z_next);
+        points.push(x_next_left, aurora_placement_bound2.y, z_next);
         colors.push(0,1,0,1, 0,1,0,1, 1,1,1,0);
 
         // left triangle 2
-        points.push(x_prev_left, y_start, z_prev);
-        points.push(x_next_left, y_end, z_next);
-        points.push(x_prev_left, y_end, z_prev);
+        points.push(x_prev_left, aurora_placement_bound1.y, z_prev);
+        points.push(x_next_left, aurora_placement_bound2.y, z_next);
+        points.push(x_prev_left, aurora_placement_bound2.y, z_prev);
         colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
 
         // right triangle 1
-        points.push(x_next_right, y_start, z_next);
-        points.push(x_prev_right, y_start, z_prev);
-        points.push(x_prev_right, y_end, z_prev);
+        points.push(x_next_right, aurora_placement_bound1.y, z_next);
+        points.push(x_prev_right, aurora_placement_bound1.y, z_prev);
+        points.push(x_prev_right, aurora_placement_bound2.y, z_prev);
         colors.push(0,1,0,1, 0,1,0,1, 1,1,1,0);
 
         // right triangle 2
-        points.push(x_next_right, y_start, z_next);
-        points.push(x_prev_right, y_end, z_prev);
-        points.push(x_next_right, y_end, z_next);
+        points.push(x_next_right, aurora_placement_bound1.y, z_next);
+        points.push(x_prev_right, aurora_placement_bound2.y, z_prev);
+        points.push(x_next_right, aurora_placement_bound2.y, z_next);
         colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
 
         // bottom triangle 1
-        points.push(x_prev_left, y_start, z_prev);
-        points.push(x_next_right, y_start, z_next);
-        points.push(x_next_left, y_start, z_next);
+        points.push(x_prev_left, aurora_placement_bound1.y, z_prev);
+        points.push(x_next_right, aurora_placement_bound1.y, z_next);
+        points.push(x_next_left, aurora_placement_bound1.y, z_next);
         colors.push(0,1,0,1, 0,1,0,1, 0,1,0,1);
 
         // bottom triangle 2
-        points.push(x_prev_left, y_start, z_prev);
-        points.push(x_prev_right, y_start, z_prev);
-        points.push(x_next_right, y_start, z_next);
+        points.push(x_prev_left, aurora_placement_bound1.y, z_prev);
+        points.push(x_prev_right, aurora_placement_bound1.y, z_prev);
+        points.push(x_next_right, aurora_placement_bound1.y, z_next);
         colors.push(0,1,0,1, 0,1,0,1, 0,1,0,1);
 
         // top triangle 1
-        points.push(x_prev_left, y_end, z_prev);
-        points.push(x_next_left, y_end, z_next);
-        points.push(x_next_right, y_end, z_next);
+        points.push(x_prev_left, aurora_placement_bound2.y, z_prev);
+        points.push(x_next_left, aurora_placement_bound2.y, z_next);
+        points.push(x_next_right, aurora_placement_bound2.y, z_next);
         colors.push(1,1,1,0, 1,1,1,0, 1,1,1,0);
 
         // top triangle 2
-        points.push(x_prev_left, y_end, z_prev);
-        points.push(x_next_right, y_end, z_next);
-        points.push(x_prev_right, y_end, z_prev);
+        points.push(x_prev_left, aurora_placement_bound2.y, z_prev);
+        points.push(x_next_right, aurora_placement_bound2.y, z_next);
+        points.push(x_prev_right, aurora_placement_bound2.y, z_prev);
         colors.push(1,1,1,0, 1,1,1,0, 1,1,1,0);
 
         z_prev = z_next;
@@ -261,15 +271,15 @@ function calc_aurora_parts(origin_ratio, offset) {
     x_right = x_prev + prev_width_half;
 
     // front triangle 1
-    points.push(x_left, y_start, z_prev);
-    points.push(x_right, y_start, z_prev);
-    points.push(x_left, y_end, z_prev);
+    points.push(x_left, aurora_placement_bound1.y, z_prev);
+    points.push(x_right, aurora_placement_bound1.y, z_prev);
+    points.push(x_left, aurora_placement_bound2.y, z_prev);
     colors.push(0,1,0,1, 0,1,0,1, 1,1,1,0);
 
     // front triangle 2
-    points.push(x_right, y_start, z_prev);
-    points.push(x_right, y_end, z_prev);
-    points.push(x_left, y_end, z_prev);
+    points.push(x_right, aurora_placement_bound1.y, z_prev);
+    points.push(x_right, aurora_placement_bound2.y, z_prev);
+    points.push(x_left, aurora_placement_bound2.y, z_prev);
     colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
 
     return {
@@ -340,28 +350,67 @@ function create_terrain() {
 // create rock meshes
 function create_rocks() {
     
-    // create the material and geometry for the rocks
+    // create the material for the rocks
     let material = new THREE.MeshPhongMaterial({
-        color:rock_color
+        color: rock_color
     });
 
-    let rock_size = 1;
-    
     // iterate for specified number of rocks
     for (let ri = 0; ri < num_rocks; ri++) {
         
-        // create, translate, and resize the geometry
-        let geometry = new THREE.BoxGeometry(rock_size, rock_size, rock_size);
-        
+        // calculate the random size of the geometry
+        let size_x = rand_in_range(rock_min_size, rock_max_size);
+        let size_y = rand_in_range(rock_min_size, rock_max_size);
+        let size_z = rand_in_range(rock_min_size, rock_max_size);
+
         let x = rand_in_range(rock_placement_bound1.x, rock_placement_bound2.x);
         let y = rand_in_range(rock_placement_bound1.y, rock_placement_bound2.y);
         let z = rand_in_range(rock_placement_bound1.z, rock_placement_bound2.z);
-        let scale_x = rand_in_range(rock_min_size, rock_max_size);
-        let scale_y = rand_in_range(rock_min_size, rock_max_size);
-        let scale_z = rand_in_range(rock_min_size, rock_max_size);
+
+        // create the geometry
+        let geometry = new THREE.BoxGeometry(size_x, size_y, size_z);
+        geometry.translate(x, y+size_y/2, z);
         
-        geometry.translate(x, y+rock_size/2, z);
-        geometry.scale(scale_x, scale_y, scale_z);
+        // add the mesh to the scene
+        let mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+    }
+}
+
+
+// create star meshes
+function create_stars() {
+
+    // create the material for the stars
+    let material = new THREE.MeshBasicMaterial({
+        color: star_color
+    });
+
+    // iterate for specified number of stars
+    for (let si = 0; si < num_stars; si++) {
+        
+        // calculate the random size of the geometry
+        let size_x = rand_in_range(star_min_size, star_max_size);
+        let size_y = rand_in_range(star_min_size, star_max_size);
+        let size_z = rand_in_range(star_min_size, star_max_size);
+
+        let x = rand_in_range(star_inclusion_bound1.x, star_inclusion_bound2.x);
+        let y = rand_in_range(star_inclusion_bound1.y, star_inclusion_bound2.y);
+        let z = rand_in_range(star_inclusion_bound1.z, star_inclusion_bound2.z);
+
+        // generate new positions for the star until it is outside of the exclusion bound
+        let point = {x:x,y:y,z:z};
+        let tries = 0;
+        let max_tries = 1000;
+        while (calc_is_point_in_prism(point, star_exclusion_bound1, star_exclusion_bound2) && tries++ < max_tries) {
+            point.x = rand_in_range(star_inclusion_bound1.x, star_inclusion_bound2.x);
+            point.y = rand_in_range(star_inclusion_bound1.y, star_inclusion_bound2.y);
+            point.z = rand_in_range(star_inclusion_bound1.z, star_inclusion_bound2.z);
+        }
+
+        // create the geometry
+        let geometry = new THREE.BoxGeometry(size_x, size_y, size_z);
+        geometry.translate(x, y+size_y/2, z);
         
         // add the mesh to the scene
         let mesh = new THREE.Mesh(geometry, material);

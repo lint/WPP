@@ -64,6 +64,21 @@ function calc_point_translation(p, l1, l2, len) {
 }
 
 
+// determines if a 3D point is inside a rectangular prism
+function calc_is_point_in_prism(p, r1, r2) {
+    let x_min = Math.min(r1.x, r2.x);
+    let x_max = Math.max(r1.x, r2.x);
+    let y_min = Math.min(r1.y, r2.y);
+    let y_max = Math.max(r1.y, r2.y);
+    let z_min = Math.min(r1.z, r2.z);
+    let z_max = Math.max(r1.z, r2.z);
+
+    return x_min <= p.x && p.x <= x_max 
+        && y_min <= p.y && p.y <= y_max 
+        && z_min <= p.z && p.z <= z_max;
+}
+
+
 // helper method to construct a flat path array from a list of points 
 function flatten_points(points) {
 
