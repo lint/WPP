@@ -1,6 +1,8 @@
 
 import * as THREE from "three";  
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+// import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
+// import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 import FastNoiseLite from "fastnoise-lite";
 
 // three js display variables
@@ -9,16 +11,17 @@ let camera = null;
 let renderer = null;
 let controls = null;
 
-// counter for frame processing
+// animation variables
 let step = 0;
+let last_time = 0;
 
 // noise variables
 let noise = null;
 
 // aurora variables
 let auroras = [];
-let num_auroras = 25;
-let num_points = 100;
+let num_auroras = 5;
+let num_points = 50;
 
 // aurora coordinate positioning
 let x_start = -1;
@@ -28,23 +31,6 @@ let y_end = 1;
 let z_start = -1;
 let z_end = 1;
 
-let cols = [{
-    stop: 0,
-    color: new THREE.Color(0xf7b000)
-}, {
-    stop: .25,
-    color: new THREE.Color(0xdd0080)
-}, {
-    stop: .5,
-    color: new THREE.Color(0x622b85)
-}, {
-    stop: .75,
-    color: new THREE.Color(0x007dae)
-}, {
-    stop: 1,
-    color: new THREE.Color(0x77c8db)
-}];
-
 
 // callback for when DOM is loaded - main function
 // document.addEventListener("DOMContentLoaded", function() { 
@@ -52,6 +38,7 @@ function main() {
     setup_noise();
     create_display();
     create_auroras();
+    // create_terrain();
     animate(0);
 };
 
@@ -77,15 +64,16 @@ function create_display() {
 
     // create scene
     scene = new THREE.Scene();
+    scene.background = new THREE.Color( 0x444444 );
 
     // setup camera
     camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
-    camera.position.set(0,2,0);
-    camera.up = new THREE.Vector3(0,0,1);
+    camera.position.set(0,0,2);
+    camera.up = new THREE.Vector3(0,1,0);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
     // setup renderer
-    renderer = new THREE.WebGLRenderer();
+    renderer = new THREE.WebGLRenderer({antialiasing:true});
     renderer.setSize(container.offsetWidth, container.offsetHeight);
     container.appendChild(renderer.domElement);
     renderer.domElement.style.width = "";
@@ -93,10 +81,14 @@ function create_display() {
 
     // setup trackball controls
     controls = new TrackballControls(camera, renderer.domElement);
+    // controls = new PointerLockControls(camera, renderer.domElement);
+    // container.addEventListener("click", function() {
+    //     controls.lock();
+    // });
 
     // setup light
-    let light = new THREE.AmbientLight(0xFFFFFF, 1);
-    scene.add(light);
+    // let light = new THREE.AmbientLight(0xFFFFFF, 1);
+    // scene.add(light);
 }
 
 
@@ -123,55 +115,146 @@ function resize_display_if_needed() {
 }
 
 
-// // create objects and place them within the scene
-// function setup_scene() {
-//     let red_material = new THREE.MeshBasicMaterial({color: 0xff0000});
-//     let green_material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-//     let blue_material = new THREE.LineBasicMaterial({color: 0x0000ff});
-//     let vertex_material = new THREE.MeshBasicMaterial({
-//         vertexColors: true,
-//         // wireframe: true,
-//         transparent: true,
-//         opacity: 0.5
-//     });
-
-//     // let plane_geo = new THREE.PlaneGeometry(2, 2);
-//     // set_gradient(plane_geo, cols, 'z', false);
-//     // let floor = new THREE.Mesh(plane_geo, vertex_material)
-//     // floor.rotation.x = -90 * Math.PI / 180;
-//     // scene.add(floor)
-// }
-
-
-// calculate points for aurora line
-function calc_aurora_points(origin_ratio, offset) {
+// calculate points for aurora
+function calc_aurora_parts(origin_ratio, offset) {
 
     let points = [];
+    let colors = [];
 
     // scale for the noise function
     let scale = 100;
+
+    // function to get the noise value
+    function get_noise(a, b, scale, offset) {
+        return noise.GetNoise(a*scale, b*scale+offset) / 5;
+    }
+
+    // width of the aurora mesh
+    let left_width = 0.01;
+    let right_width = 0.01;
 
     // calculate point coordinate information based on provided variables
     let x_origin = origin_ratio * Math.abs(x_end - x_start) + x_start;
     let z_dist = Math.abs(z_end - z_start);
 
-    for (let i = 0; i < num_points; i++) {
+    // calculate coordinates for first point
+    let z_prev = z_start;
+    let x_prev = x_origin + get_noise(x_origin, z_prev, scale, offset);
 
-        let x = x_origin;
-        let z = (i / num_points) * z_dist + z_start;
-        let noise_val = noise.GetNoise(x*scale, z*scale+offset) / 5;
-        
-        points.push(x + noise_val, 0.1, z);
+    let x_left = x_prev - left_width;
+    let x_right = x_prev + right_width;
+
+    // back triangle 1
+    points.push(x_left, y_start, z_prev);
+    points.push(x_left, y_end, z_prev);
+    points.push(x_right, y_start, z_prev);
+    colors.push(0,1,0,1, 1,1,1,0, 0,1,0,1);
+
+    // back triangle 2
+    points.push(x_right, y_start, z_prev);
+    points.push(x_left, y_end, z_prev);
+    points.push(x_right, y_end, z_prev);
+    colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
+
+    // calculate coordinates for every other point
+    for (let i = 1; i < num_points; i++) {
+
+        let z_next = (i / num_points) * z_dist + z_start;
+        let noise_val = get_noise(x_origin, z_next, scale, offset);
+        let x_next = x_origin + noise_val;
+
+        let x_next_left = x_next - left_width;
+        let x_next_right = x_next + right_width;
+
+        let x_prev_left = x_prev - left_width;
+        let x_prev_right = x_prev + right_width;
+
+        // calculate faces
+        // left triangle 1 
+        points.push(x_prev_left, y_start, z_prev);
+        points.push(x_next_left, y_start, z_next);
+        points.push(x_next_left, y_end, z_next);
+        colors.push(0,1,0,1, 0,1,0,1, 1,1,1,0);
+
+        // left triangle 2
+        points.push(x_prev_left, y_start, z_prev);
+        points.push(x_next_left, y_end, z_next);
+        points.push(x_prev_left, y_end, z_prev);
+        colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
+
+        // right triangle 1
+        points.push(x_next_right, y_start, z_next);
+        points.push(x_prev_right, y_start, z_prev);
+        points.push(x_prev_right, y_end, z_prev);
+        colors.push(0,1,0,1, 0,1,0,1, 1,1,1,0);
+
+        // right triangle 2
+        points.push(x_next_right, y_start, z_next);
+        points.push(x_prev_right, y_end, z_prev);
+        points.push(x_next_right, y_end, z_next);
+        colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
+
+        // bottom triangle 1
+        points.push(x_prev_left, y_start, z_prev);
+        points.push(x_next_right, y_start, z_next);
+        points.push(x_next_left, y_start, z_next);
+        colors.push(0,1,0,1, 0,1,0,1, 0,1,0,1);
+
+        // bottom triangle 2
+        points.push(x_prev_left, y_start, z_prev);
+        points.push(x_prev_right, y_start, z_prev);
+        points.push(x_next_right, y_start, z_next);
+        colors.push(0,1,0,1, 0,1,0,1, 0,1,0,1);
+
+        // top triangle 1
+        points.push(x_prev_left, y_end, z_prev);
+        points.push(x_next_left, y_end, z_next);
+        points.push(x_next_right, y_end, z_next);
+        colors.push(1,1,1,0, 1,1,1,0, 1,1,1,0);
+
+        // top triangle 2
+        points.push(x_prev_left, y_end, z_prev);
+        points.push(x_next_right, y_end, z_next);
+        points.push(x_prev_right, y_end, z_prev);
+        colors.push(1,1,1,0, 1,1,1,0, 1,1,1,0);
+
+        z_prev = z_next;
+        x_prev = x_next;
     }
 
-    return points;
+    x_left = x_prev - left_width;
+    x_right = x_prev + right_width;
+
+    // front triangle 1
+    points.push(x_left, y_start, z_prev);
+    points.push(x_right, y_start, z_prev);
+    points.push(x_left, y_end, z_prev);
+    colors.push(0,1,0,1, 0,1,0,1, 1,1,1,0);
+
+    // front triangle 2
+    points.push(x_right, y_start, z_prev);
+    points.push(x_right, y_end, z_prev);
+    points.push(x_left, y_end, z_prev);
+    colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
+
+    return {
+        points:points,
+        colors:colors
+    };
 }
 
 
 // create and store shapes for each aurora line
 function create_auroras() {
 
-    let material = new THREE.MeshBasicMaterial({color:0x00FF00});
+    let material = new THREE.MeshBasicMaterial({
+        // color:0x00FF00,
+        vertexColors: true,
+        transparent : true,
+        // vertexAlphas:true,
+        side: THREE.FrontSide
+    });
+    material.depthTest = false;
 
     // repeat process for given number of aurora lines
     for (let i = 0; i < num_auroras; i++) {
@@ -180,11 +263,12 @@ function create_auroras() {
         let origin_ratio = i / num_auroras + (1 / num_auroras / 2);
 
         // iterate for each point to construct the line
-        let points = calc_aurora_points(origin_ratio, 0);
+        let aurora_info = calc_aurora_parts(origin_ratio, 0);
 
         // create the geometry and mesh for the line
-        let geometry = new THREE.BufferGeometry().setFromPoints(points);
-        let mesh = new THREE.Line(geometry, material);
+        let geometry = new THREE.BufferGeometry().setFromPoints(aurora_info.points);
+        geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(aurora_info.colors), 4));
+        let mesh = new THREE.Mesh(geometry, material);
 
         // store the geometry and mesh
         auroras.push({
@@ -197,6 +281,21 @@ function create_auroras() {
         scene.add(mesh);
     }
 }
+
+
+// create terrain mesh
+// function create_terrain() {
+
+//     let material = new THREE.MeshBasicMaterial({
+//         color:0xFF0000,
+//         side:THREE.DoubleSide
+//     });
+//     let geometry = new THREE.PlaneGeometry(2, 2);
+
+//     let mesh = new THREE.Mesh(geometry, material)
+//     mesh.rotation.x = -90 * Math.PI / 180;
+//     scene.add(mesh)
+// }
 
 
 // perform an animation
@@ -217,8 +316,8 @@ function animate(time) {
         let geometry = aurora.geometry;
 
         // calculate new vertex positions
-        let points = calc_aurora_points(aurora.origin_ratio, step);
-        geometry.attributes.position = new THREE.BufferAttribute(new Float32Array(points), 3);
+        let aurora_info = calc_aurora_parts(aurora.origin_ratio, step);
+        geometry.attributes.position = new THREE.BufferAttribute(new Float32Array(aurora_info.points), 3);
 
         // update the geometry
         geometry.computeVertexNormals();
@@ -226,8 +325,10 @@ function animate(time) {
     }
 
     // update controls and animation changes
-    controls.update();
+    controls.update(time - last_time);
 	renderer.render(scene, camera);
+    
+    last_time = time;
 }
 
 // set gradient colors for a geometry
