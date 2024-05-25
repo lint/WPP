@@ -21,23 +21,28 @@ let movement_speed = 0.5;
 // noise variables
 let noise = null;
 
-// scene object variables
+// aurora settings
 let auroras = [];
-let num_auroras = 5;
-let num_points_per_aurora = 100;
+let num_auroras = 10;
+let num_points_per_aurora = 250;
+let aurora_scale_inner = 10;
+let aurora_scale_outer = 1;
+let aurora_width = 0.5;
+
+// aurora coordinate positioning
+let x_start = -15;
+let x_end = 15;
+let y_start = 8;
+let y_end = 12;
+let z_start = -30;
+let z_end = 30;
+
+// rock settings
 let num_rocks = 100;
 let rock_min_size = 0.05;
 let rock_max_size = 0.15;
 let rock_placement_bound1 = {x:-50, y: 0, z:-50};
 let rock_placement_bound2 = {x:50, y:0, z:50};
-
-// aurora coordinate positioning
-let x_start = -2;
-let x_end = 2;
-let y_start = 1;
-let y_end = 2;
-let z_start = -4;
-let z_end = 4;
 
 // color variables
 let sky_color = 0x0c1b2e;
@@ -149,17 +154,12 @@ function calc_aurora_parts(origin_ratio, offset) {
     let points = [];
     let colors = [];
 
-    // scale for the noise function
-    let scale = 100;
-
     // function to get the noise value
-    function get_noise(a, b, scale, offset) {
-        return noise.GetNoise(a*scale, b*scale+offset) / 5;
+    function get_noise(a, b, offset) {
+        return noise.GetNoise(a*aurora_scale_inner, b*aurora_scale_inner+offset) * aurora_scale_outer;
     }
 
-    // width of the aurora mesh
-    let left_width = 0.01;
-    let right_width = 0.01;
+
 
     // calculate point coordinate information based on provided variables
     let x_origin = origin_ratio * Math.abs(x_end - x_start) + x_start;
@@ -167,10 +167,14 @@ function calc_aurora_parts(origin_ratio, offset) {
 
     // calculate coordinates for first point
     let z_prev = z_start;
-    let x_prev = x_origin + get_noise(x_origin, z_prev, scale, offset);
+    let noise_val = get_noise(x_origin, z_prev, offset);
+    let x_prev = x_origin + noise_val;
 
-    let x_left = x_prev - left_width;
-    let x_right = x_prev + right_width;
+    // width of the aurora mesh
+    let prev_width_half = aurora_width * ((noise_val + 1) / 2) / 2;
+
+    let x_left = x_prev - prev_width_half;
+    let x_right = x_prev + prev_width_half;
 
     // back triangle 1
     points.push(x_left, y_start, z_prev);
@@ -188,14 +192,16 @@ function calc_aurora_parts(origin_ratio, offset) {
     for (let i = 1; i < num_points_per_aurora; i++) {
 
         let z_next = (i / num_points_per_aurora) * z_dist + z_start;
-        let noise_val = get_noise(x_origin, z_next, scale, offset);
+        let noise_val = get_noise(x_origin, z_next, offset);
         let x_next = x_origin + noise_val;
 
-        let x_next_left = x_next - left_width;
-        let x_next_right = x_next + right_width;
+        let next_width_half = aurora_width * ((noise_val + 1) / 2) / 2;
 
-        let x_prev_left = x_prev - left_width;
-        let x_prev_right = x_prev + right_width;
+        let x_next_left = x_next - next_width_half;
+        let x_next_right = x_next + next_width_half;
+
+        let x_prev_left = x_prev - prev_width_half;
+        let x_prev_right = x_prev + prev_width_half;
 
         // calculate faces
         // left triangle 1 
@@ -248,10 +254,11 @@ function calc_aurora_parts(origin_ratio, offset) {
 
         z_prev = z_next;
         x_prev = x_next;
+        prev_width_half = next_width_half;
     }
 
-    x_left = x_prev - left_width;
-    x_right = x_prev + right_width;
+    x_left = x_prev - prev_width_half;
+    x_right = x_prev + prev_width_half;
 
     // front triangle 1
     points.push(x_left, y_start, z_prev);
