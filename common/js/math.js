@@ -7,7 +7,7 @@ Array.prototype.sample = function() {
 
 // calculate random number in range
 function rand_in_range(min, max) {
-    return Math.random() * (max - min) + min;
+    return Math.random() * Math.abs(max - min) + Math.min(min, max);
 }
 
 

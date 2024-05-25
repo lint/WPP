@@ -21,10 +21,15 @@ let movement_speed = 0.5;
 // noise variables
 let noise = null;
 
-// aurora variables
+// scene object variables
 let auroras = [];
 let num_auroras = 5;
-let num_points = 100;
+let num_points_per_aurora = 100;
+let num_rocks = 100;
+let rock_min_size = 0.05;
+let rock_max_size = 0.15;
+let rock_placement_bound1 = {x:-50, y: 0, z:-50};
+let rock_placement_bound2 = {x:50, y:0, z:50};
 
 // aurora coordinate positioning
 let x_start = -2;
@@ -37,6 +42,7 @@ let z_end = 4;
 // color variables
 let sky_color = 0x0c1b2e;
 let ground_color = 0x574032;
+let rock_color = 0x444444;
 
 // movement control variables for PointerLockControls
 let key_map = {};
@@ -53,6 +59,7 @@ function main() {
     create_display();
     create_auroras();
     create_terrain();
+    create_rocks();
     animate(0);
 };
 
@@ -81,8 +88,8 @@ function create_display() {
     scene.background = new THREE.Color(sky_color);
 
     // setup camera
-    camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
-    camera.position.set(0,0.1,1);
+    camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.001, 1000);
+    camera.position.set(0,0.15,1);
     camera.up = new THREE.Vector3(0,1,0);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
@@ -101,8 +108,12 @@ function create_display() {
     });
 
     // setup light
-    let light = new THREE.AmbientLight(0xFFFFFF, 1);
-    scene.add(light);
+    let ambient_light = new THREE.AmbientLight(0xFFFFFF, 0.1);
+    scene.add(ambient_light);
+    
+    let directional_light = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+    directional_light.position.set(0, 2, -2);
+    scene.add(directional_light);
 
     // setup clock
     clock = new THREE.Clock();
@@ -174,9 +185,9 @@ function calc_aurora_parts(origin_ratio, offset) {
     colors.push(0,1,0,1, 1,1,1,0, 1,1,1,0);
 
     // calculate coordinates for every other point
-    for (let i = 1; i < num_points; i++) {
+    for (let i = 1; i < num_points_per_aurora; i++) {
 
-        let z_next = (i / num_points) * z_dist + z_start;
+        let z_next = (i / num_points_per_aurora) * z_dist + z_start;
         let noise_val = get_noise(x_origin, z_next, scale, offset);
         let x_next = x_origin + noise_val;
 
@@ -271,7 +282,7 @@ function create_auroras() {
         // vertexAlphas:true,
         side: THREE.FrontSide
     });
-    material.depthTest = false;
+    // material.depthTest = false;
 
     // repeat process for given number of aurora lines
     for (let i = 0; i < num_auroras; i++) {
@@ -303,15 +314,52 @@ function create_auroras() {
 // create terrain mesh
 function create_terrain() {
 
+    // create the material and geometry for the ground
     let material = new THREE.MeshPhongMaterial({
-        color:ground_color,
-        side:THREE.DoubleSide
+        color: ground_color,
+        side: THREE.DoubleSide
     });
     let geometry = new THREE.PlaneGeometry(100, 100);
 
+    // create and rotate the mesh
     let mesh = new THREE.Mesh(geometry, material)
     mesh.rotation.x = -90 * Math.PI / 180;
+
+    // add the mesh to the scene
     scene.add(mesh)
+}
+
+
+// create rock meshes
+function create_rocks() {
+    
+    // create the material and geometry for the rocks
+    let material = new THREE.MeshPhongMaterial({
+        color:rock_color
+    });
+
+    let rock_size = 1;
+    
+    // iterate for specified number of rocks
+    for (let ri = 0; ri < num_rocks; ri++) {
+        
+        // create, translate, and resize the geometry
+        let geometry = new THREE.BoxGeometry(rock_size, rock_size, rock_size);
+        
+        let x = rand_in_range(rock_placement_bound1.x, rock_placement_bound2.x);
+        let y = rand_in_range(rock_placement_bound1.y, rock_placement_bound2.y);
+        let z = rand_in_range(rock_placement_bound1.z, rock_placement_bound2.z);
+        let scale_x = rand_in_range(rock_min_size, rock_max_size);
+        let scale_y = rand_in_range(rock_min_size, rock_max_size);
+        let scale_z = rand_in_range(rock_min_size, rock_max_size);
+        
+        geometry.translate(x, y+rock_size/2, z);
+        geometry.scale(scale_x, scale_y, scale_z);
+        
+        // add the mesh to the scene
+        let mesh = new THREE.Mesh(geometry, material);
+        scene.add(mesh);
+    }
 }
 
 
@@ -344,16 +392,16 @@ function animate(time) {
 
     // PointerLockControls movement
     if (key_map["KeyW"] || key_map["ArrowUp"]) {
-        controls.moveForward(delta * movement_speed)
+        controls.moveForward(delta * movement_speed);
     }
     if (key_map["KeyS"] || key_map["ArrowDown"]) {
-        controls.moveForward(-delta * movement_speed)
+        controls.moveForward(-delta * movement_speed);
     }
     if (key_map["KeyA"] || key_map["ArrowLeft"]) {
-        controls.moveRight(-delta * movement_speed)
+        controls.moveRight(-delta * movement_speed);
     }
     if (key_map["KeyD"] || key_map["ArrowRight"]) {
-        controls.moveRight(delta * movement_speed)
+        controls.moveRight(delta * movement_speed);
     }
 
     // update controls and animation changes
