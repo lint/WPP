@@ -53,8 +53,9 @@ let star_inclusion_bound2 = {x:250, y:300, z:250};
 let terrain_mesh = null;
 let num_terrain_parts = 100;
 let terrain_size = 100;
-let terrain_scale_inner = 10;
-let terrain_scale_outer = 1;
+let terrain_scale_inner = 4;
+let terrain_scale_outer = 12;
+let terrain_flat_center_radius = 10;
 
 // color variables
 let sky_color = 0x0c1b2e;
@@ -341,7 +342,28 @@ function create_auroras() {
 
 // function to get the noise value
 function get_terrain_noise(a, b, offset) {
-    return noise.GetNoise(a*terrain_scale_inner, b*terrain_scale_inner+offset) * terrain_scale_outer;
+
+    let dist = calc_dist({x:0, y:0}, {x:a, y:b});
+    // TODO: multiplier function could be better
+    // let mult = Math.log2(0.15 * dist+1);
+    // let mult = calc_sigmoid(dist * 2, 10) * 2;
+    let mult = dist / terrain_size;
+    let noise_val = noise.GetNoise(a*terrain_scale_inner, b*terrain_scale_inner+offset) * terrain_scale_outer;
+
+    // make a flat circle in the center
+    if (dist < terrain_flat_center_radius) {
+        return 0;
+    }
+    
+    // calculate the result
+    let result = noise_val * mult;
+
+    // cutoff any negative results
+    if (result < 0) {
+        result = 0;
+    }
+
+    return result;
 }
 
 

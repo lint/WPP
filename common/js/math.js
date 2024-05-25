@@ -79,6 +79,12 @@ function calc_is_point_in_prism(p, r1, r2) {
 }
 
 
+// calculate a sigmoid function with the given inputs
+function calc_sigmoid(z, k=1) {
+  return 1 / (1 + Math.exp(-z/k));
+}
+
+
 // helper method to construct a flat path array from a list of points 
 function flatten_points(points) {
 
