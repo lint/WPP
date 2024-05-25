@@ -53,6 +53,17 @@ function calc_midpoint(p1, p2) {
 }
 
 
+// translates a point in the direction of a line by a given length
+function calc_point_translation(p, l1, l2, len) {
+    let dist = calc_dist(l1, l2);
+
+    return {
+        x: p.x + (l2.x - l1.x) / dist * len,
+        y: p.y + (l2.y - l1.y) / dist * len
+    };
+}
+
+
 // helper method to construct a flat path array from a list of points 
 function flatten_points(points) {
 

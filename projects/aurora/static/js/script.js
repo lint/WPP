@@ -1,6 +1,7 @@
 
 import * as THREE from "three";  
 import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
+import FastNoiseLite from "fastnoise-lite";
 
 // three js display variables
 let scene = null;
@@ -10,13 +11,22 @@ let controls = null;
 
 let line_geo = null;
 
+let step = 0;
+
+// noise variables
+let noise = null;
+
 // konva js display variables
 // let stage = null;
 // let main_layer = null;
 // let anim = null;
 // let lines = [];
 let auroras = [];
-let num_auroras = 1;
+let num_auroras = 50;
+let x_start = -1;
+let x_end = 1;
+let z_start = -1;
+let z_end = 1;
 
 let num_points = 100;
 let max_dist = 10;
@@ -50,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function() {
     // // initialize the aurora lines and animate them
     // initialize_lines();
     // animate_stage();
+    setup_noise();
 
     create_display();
     setup_scene();
@@ -64,6 +75,13 @@ document.addEventListener("DOMContentLoaded", function() {
 //     resize_display_if_needed();
 
 // }, true);
+
+
+// setup noise variables
+function setup_noise() {
+    noise = new FastNoiseLite();
+    // noise.SetNoiseType(FastNoiseLite.NoiseType.OpenSimplex2);
+}
 
 
 // setup three scene variables
@@ -110,7 +128,7 @@ function resize_display_if_needed() {
 // create objects and place them within the scene
 function setup_scene() {
     
-    camera.position.set(0,0.5,-2);
+    camera.position.set(0,2,0);
     camera.up = new THREE.Vector3(0,0,1);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
@@ -127,11 +145,11 @@ function setup_scene() {
         opacity: 0.5
     });
 
-    let plane_geo = new THREE.PlaneGeometry(2, 2);
-    set_gradient(plane_geo, cols, 'z', false);
-    let floor = new THREE.Mesh(plane_geo, vertex_material)
-    floor.rotation.x = -90 * Math.PI / 180;
-    scene.add(floor)
+    // let plane_geo = new THREE.PlaneGeometry(2, 2);
+    // set_gradient(plane_geo, cols, 'z', false);
+    // let floor = new THREE.Mesh(plane_geo, vertex_material)
+    // floor.rotation.x = -90 * Math.PI / 180;
+    // scene.add(floor)
 
     let points = [];
 
@@ -144,23 +162,72 @@ function setup_scene() {
 }
 
 
+// calculate points for aurora line
+function calc_aurora_points(x_origin, z_origin, offset) {
+
+    let points = [];
+
+    let scale = 100;
+
+    let z_dist = Math.abs(z_end - z_start);
+    let z_step = z_dist / num_points;
+
+    let x_curr = x_origin;
+    let z_curr = z_origin;
+    let velocity = {x:0, y:0, z:z_step};
+
+    for (let i = 0; i < num_points; i++) {
+
+        let x = x_origin;
+        let z = (i / num_points) * z_dist + z_start;
+        let noise_val = noise.GetNoise(x*scale, z*scale+offset);
+        
+        points.push(x + noise_val, 0.1, z);
+
+
+        // // let z = (i / num_points) * z_dist + z_start;
+        // // let noise_val = noise.GetNoise(x_origin, z_origin + z * scale + offset);
+        // let noise_val = noise.GetNoise(x_curr, z_curr+offset) * Math.PI + Math.PI;
+
+        // // velocity.x += Math.cos(noise_val) * 0.8;
+        // // velocity.z += Math.sin(noise_val) * 0.8;
+        // velocity.x = Math.cos(noise_val) * 0.8;
+        // velocity.z = Math.sin(noise_val) * 0.8;
+
+        // let new_point = calc_point_translation({x:x_curr, y:z_curr}, {x:x_curr, y:z_curr}, {x:x_curr+velocity.x, y:z_curr+velocity.z}, z_step);
+        // x_curr = new_point.x;
+        // z_curr = new_point.y;
+
+        // // x_curr += velocity.x;
+        // // z_curr += velocity.z;
+
+        // // velocity.x *= 0.5;
+        // // velocity.z *= 0.5;
+        
+        // points.push(x_curr, 0.1, z_curr);
+    }
+
+    return points;
+}
+
+
 // create and store shapes for each aurora line
 function create_auroras() {
 
     let material = new THREE.MeshBasicMaterial({color:0x00FF00});
 
+    let x_dist = Math.abs(x_end - x_start);
+    let x_step = x_dist / num_auroras;
+
     // repeat process for given number of aurora lines
     for (let i = 0; i < num_auroras; i++) {
 
+
+        let origin_x = i * x_step + (x_step / 2) + x_start;
+        let origin_z = z_start;
+
         // iterate for each point to construct the line
-        let points = [];
-        for (let i = 0; i < num_points; i++) {
-    
-            let x = max_dist * i / num_points;
-            let z = Math.sin(x);
-            
-            points.push(new THREE.Vector3(x, 0.1, z));
-        }
+        let points = calc_aurora_points(origin_x, origin_z, 0);
 
         // create the geometry and mesh for the line
         let geometry = new THREE.BufferGeometry().setFromPoints(points);
@@ -169,20 +236,21 @@ function create_auroras() {
         // store the geometry and mesh
         auroras.push({
             geometry: geometry,
-            mesh: mesh
+            mesh: mesh,
+            origin_x: origin_x,
+            origin_z: origin_z
         });
 
         // add the aurora to the scene
         scene.add(mesh);
     }
-
-    console.log(auroras)
 }
 
 
 // perform an animation
 function animate(time) {
-    time *= 0.001; // convert time to seconds
+    time *= 0.01; // convert time to seconds
+    step += 0.10;
 
     // request the next animation frame
     requestAnimationFrame(animate);
@@ -193,15 +261,12 @@ function animate(time) {
     // iterate over every stored aurora
     for (let ai = 0; ai < auroras.length; ai++) {
         
+        let aurora = auroras[ai];
+        let geometry = aurora.geometry;
 
-        let geometry = auroras[ai].geometry;
-
-        for (let pi = 0; pi < geometry.attributes.position.count; pi++) {
-            let x = max_dist * pi / num_points;
-            let z = Math.sin(x+time);
-    
-            geometry.attributes.position.setXYZ(pi, x, 0.1, z);
-        }
+        // calculate new vertex positions
+        let points = calc_aurora_points(aurora.origin_x, aurora.origin_z, step);
+        geometry.attributes.position = new THREE.BufferAttribute(new Float32Array(points), 3);
 
         // update the geometry
         geometry.computeVertexNormals();
