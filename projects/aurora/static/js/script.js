@@ -1,8 +1,8 @@
 
 import * as THREE from "three";  
-import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
-// import { FirstPersonControls } from 'three/addons/controls/FirstPersonControls.js';
-// import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
+// import { TrackballControls } from "three/addons/controls/TrackballControls.js";
+// import { FirstPersonControls } from "three/addons/controls/FirstPersonControls.js";
+import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import FastNoiseLite from "fastnoise-lite";
 
 // three js display variables
@@ -10,10 +10,13 @@ let scene = null;
 let camera = null;
 let renderer = null;
 let controls = null;
+let clock = null;
 
 // animation variables
 let step = 0;
 let last_time = 0;
+let delta = 0;
+let movement_speed = 0.5;
 
 // noise variables
 let noise = null;
@@ -21,16 +24,27 @@ let noise = null;
 // aurora variables
 let auroras = [];
 let num_auroras = 5;
-let num_points = 50;
+let num_points = 100;
 
 // aurora coordinate positioning
-let x_start = -1;
-let x_end = 1;
-let y_start = -1;
-let y_end = 1;
-let z_start = -1;
-let z_end = 1;
+let x_start = -2;
+let x_end = 2;
+let y_start = 1;
+let y_end = 2;
+let z_start = -4;
+let z_end = 4;
 
+// color variables
+let sky_color = 0x0c1b2e;
+let ground_color = 0x574032;
+
+// movement control variables for PointerLockControls
+let key_map = {};
+let on_key = function (e) {
+    key_map[e.code] = e.type === "keydown"
+};
+document.addEventListener("keydown", on_key, false);
+document.addEventListener("keyup", on_key, false);
 
 // callback for when DOM is loaded - main function
 // document.addEventListener("DOMContentLoaded", function() { 
@@ -38,7 +52,7 @@ function main() {
     setup_noise();
     create_display();
     create_auroras();
-    // create_terrain();
+    create_terrain();
     animate(0);
 };
 
@@ -64,11 +78,11 @@ function create_display() {
 
     // create scene
     scene = new THREE.Scene();
-    scene.background = new THREE.Color( 0x444444 );
+    scene.background = new THREE.Color(sky_color);
 
     // setup camera
     camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
-    camera.position.set(0,0,2);
+    camera.position.set(0,0.1,1);
     camera.up = new THREE.Vector3(0,1,0);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
@@ -80,15 +94,18 @@ function create_display() {
     renderer.domElement.style.height = "";
 
     // setup trackball controls
-    controls = new TrackballControls(camera, renderer.domElement);
-    // controls = new PointerLockControls(camera, renderer.domElement);
-    // container.addEventListener("click", function() {
-    //     controls.lock();
-    // });
+    // controls = new TrackballControls(camera, renderer.domElement);
+    controls = new PointerLockControls(camera, renderer.domElement);
+    container.addEventListener("click", function() {
+        controls.lock();
+    });
 
     // setup light
-    // let light = new THREE.AmbientLight(0xFFFFFF, 1);
-    // scene.add(light);
+    let light = new THREE.AmbientLight(0xFFFFFF, 1);
+    scene.add(light);
+
+    // setup clock
+    clock = new THREE.Clock();
 }
 
 
@@ -284,24 +301,25 @@ function create_auroras() {
 
 
 // create terrain mesh
-// function create_terrain() {
+function create_terrain() {
 
-//     let material = new THREE.MeshBasicMaterial({
-//         color:0xFF0000,
-//         side:THREE.DoubleSide
-//     });
-//     let geometry = new THREE.PlaneGeometry(2, 2);
+    let material = new THREE.MeshPhongMaterial({
+        color:ground_color,
+        side:THREE.DoubleSide
+    });
+    let geometry = new THREE.PlaneGeometry(100, 100);
 
-//     let mesh = new THREE.Mesh(geometry, material)
-//     mesh.rotation.x = -90 * Math.PI / 180;
-//     scene.add(mesh)
-// }
+    let mesh = new THREE.Mesh(geometry, material)
+    mesh.rotation.x = -90 * Math.PI / 180;
+    scene.add(mesh)
+}
 
 
 // perform an animation
 function animate(time) {
     time *= 0.01; // convert time to seconds
     step += 0.10;
+    delta = clock.getDelta();
 
     // request the next animation frame
     requestAnimationFrame(animate);
@@ -324,53 +342,25 @@ function animate(time) {
         geometry.attributes.position.needsUpdate = true;
     }
 
+    // PointerLockControls movement
+    if (key_map["KeyW"] || key_map["ArrowUp"]) {
+        controls.moveForward(delta * movement_speed)
+    }
+    if (key_map["KeyS"] || key_map["ArrowDown"]) {
+        controls.moveForward(-delta * movement_speed)
+    }
+    if (key_map["KeyA"] || key_map["ArrowLeft"]) {
+        controls.moveRight(-delta * movement_speed)
+    }
+    if (key_map["KeyD"] || key_map["ArrowRight"]) {
+        controls.moveRight(delta * movement_speed)
+    }
+
     // update controls and animation changes
-    controls.update(time - last_time);
+    // controls.update(time - last_time);
 	renderer.render(scene, camera);
     
     last_time = time;
-}
-
-// set gradient colors for a geometry
-// from: https://stackoverflow.com/questions/52614371/apply-color-gradient-to-material-on-mesh-three-js
-function set_gradient(geometry, colors, axis, reverse) {
-
-    geometry.computeBoundingBox();
-  
-    var bbox = geometry.boundingBox;
-    var size = new THREE.Vector3().subVectors(bbox.max, bbox.min);
-  
-    var vertexIndices = ['a', 'b', 'c'];
-    var face, vertex, normalized = new THREE.Vector3(),
-      normalizedAxis = 0;
-  
-    // for (var c = 0; c < colors.length - 1; c++) {
-  
-    //     var colorDiff = colors[c + 1].stop - colors[c].stop;
-    
-    //     for (var i = 0; i < geometry.faces.length; i++) {
-    //         face = geometry.faces[i];
-    //         for (var v = 0; v < 3; v++) {
-    //             vertex = geometry.vertices[face[vertexIndices[v]]];
-    //             normalizedAxis = normalized.subVectors(vertex, bbox.min).divide(size)[axis];
-    //             if (reverse) {
-    //                 normalizedAxis = 1 - normalizedAxis;
-    //             }
-    //             if (normalizedAxis >= colors[c].stop && normalizedAxis <= colors[c + 1].stop) {
-    //                 var localNormalizedAxis = (normalizedAxis - colors[c].stop) / colorDiff;
-    //                 face.vertexColors[v] = colors[c].color.clone().lerp(colors[c + 1].color, localNormalizedAxis);
-    //             }
-    //         }
-    //     }
-    // }
-
-    colors = [];
-    for (let i = 0; i < geometry.attributes.position.count; i++) {
-        colors.push(Math.random(), Math.random(), Math.random());
-    }
-    geometry.setAttribute('color',
-        new THREE.BufferAttribute(new Float32Array(colors), 3));
-  
 }
 
 
