@@ -1,22 +1,42 @@
 
 import * as THREE from "three";  
-
+import { TrackballControls } from 'three/addons/controls/TrackballControls.js';
 
 // three js display variables
 let scene = null;
 let camera = null;
 let renderer = null;
+let controls = null;
 
-let cube = null;
+let line_geo = null;
 
 // konva js display variables
 // let stage = null;
 // let main_layer = null;
 // let anim = null;
 // let lines = [];
+let auroras = [];
+let num_auroras = 1;
 
-// let num_points = 100;
-// let max_dist = 1000;
+let num_points = 100;
+let max_dist = 10;
+
+let cols = [{
+    stop: 0,
+    color: new THREE.Color(0xf7b000)
+  }, {
+    stop: .25,
+    color: new THREE.Color(0xdd0080)
+  }, {
+    stop: .5,
+    color: new THREE.Color(0x622b85)
+  }, {
+    stop: .75,
+    color: new THREE.Color(0x007dae)
+  }, {
+    stop: 1,
+    color: new THREE.Color(0x77c8db)
+  }];
 
 // let stage_center = null;
 
@@ -33,7 +53,8 @@ document.addEventListener("DOMContentLoaded", function() {
 
     create_display();
     setup_scene();
-    animate();
+    create_auroras();
+    animate(0);
 });
 
 
@@ -49,16 +70,18 @@ document.addEventListener("DOMContentLoaded", function() {
 function create_display() {
 
     let container = document.getElementById("stage-container");
-    console.log(container.offsetWidth, container.offsetHeight)
 
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
+    
     
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(container.offsetWidth, container.offsetHeight);
     container.appendChild(renderer.domElement);
     renderer.domElement.style.width = "";
     renderer.domElement.style.height = "";
+
+    controls = new TrackballControls(camera, renderer.domElement);
 }
 
 
@@ -86,27 +109,152 @@ function resize_display_if_needed() {
 
 // create objects and place them within the scene
 function setup_scene() {
-    const geometry = new THREE.BoxGeometry(1, 1, 1 );
-    const material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-    cube = new THREE.Mesh(geometry, material);
-    scene.add(cube);
+    
+    camera.position.set(0,0.5,-2);
+    camera.up = new THREE.Vector3(0,0,1);
+    camera.lookAt(new THREE.Vector3(0,0,0));
 
-    camera.position.z = 2;
+    let light = new THREE.AmbientLight(0xFFFFFF, 1);
+    scene.add(light);
+
+    let red_material = new THREE.MeshBasicMaterial({color: 0xff0000});
+    let green_material = new THREE.MeshBasicMaterial({color: 0x00ff00});
+    let blue_material = new THREE.LineBasicMaterial({color: 0x0000ff});
+    let vertex_material = new THREE.MeshBasicMaterial({
+        vertexColors: true,
+        // wireframe: true,
+        transparent: true,
+        opacity: 0.5
+    });
+
+    let plane_geo = new THREE.PlaneGeometry(2, 2);
+    set_gradient(plane_geo, cols, 'z', false);
+    let floor = new THREE.Mesh(plane_geo, vertex_material)
+    floor.rotation.x = -90 * Math.PI / 180;
+    scene.add(floor)
+
+    let points = [];
+
+
+
+    line_geo = new THREE.BufferGeometry().setFromPoints( points );
+    let line = new THREE.Line(line_geo, blue_material);
+    scene.add(line);
+
+}
+
+
+// create and store shapes for each aurora line
+function create_auroras() {
+
+    let material = new THREE.MeshBasicMaterial({color:0x00FF00});
+
+    // repeat process for given number of aurora lines
+    for (let i = 0; i < num_auroras; i++) {
+
+        // iterate for each point to construct the line
+        let points = [];
+        for (let i = 0; i < num_points; i++) {
+    
+            let x = max_dist * i / num_points;
+            let z = Math.sin(x);
+            
+            points.push(new THREE.Vector3(x, 0.1, z));
+        }
+
+        // create the geometry and mesh for the line
+        let geometry = new THREE.BufferGeometry().setFromPoints(points);
+        let mesh = new THREE.Line(geometry, material);
+
+        // store the geometry and mesh
+        auroras.push({
+            geometry: geometry,
+            mesh: mesh
+        });
+
+        // add the aurora to the scene
+        scene.add(mesh);
+    }
+
+    console.log(auroras)
 }
 
 
 // perform an animation
-function animate() {
+function animate(time) {
+    time *= 0.001; // convert time to seconds
 
-	requestAnimationFrame(animate);
+    // request the next animation frame
+    requestAnimationFrame(animate);
 
-	cube.rotation.x += 0.01;
-	cube.rotation.y += 0.01;
-
+    // resize the scene if window size has changed
     resize_display_if_needed();
 
+    // iterate over every stored aurora
+    for (let ai = 0; ai < auroras.length; ai++) {
+        
+
+        let geometry = auroras[ai].geometry;
+
+        for (let pi = 0; pi < geometry.attributes.position.count; pi++) {
+            let x = max_dist * pi / num_points;
+            let z = Math.sin(x+time);
+    
+            geometry.attributes.position.setXYZ(pi, x, 0.1, z);
+        }
+
+        // update the geometry
+        geometry.computeVertexNormals();
+        geometry.attributes.position.needsUpdate = true;
+    }
+
+    // update controls and animation changes
+    controls.update();
 	renderer.render(scene, camera);
 }
+
+// set gradient colors for a geometry
+// from: https://stackoverflow.com/questions/52614371/apply-color-gradient-to-material-on-mesh-three-js
+function set_gradient(geometry, colors, axis, reverse) {
+
+    geometry.computeBoundingBox();
+  
+    var bbox = geometry.boundingBox;
+    var size = new THREE.Vector3().subVectors(bbox.max, bbox.min);
+  
+    var vertexIndices = ['a', 'b', 'c'];
+    var face, vertex, normalized = new THREE.Vector3(),
+      normalizedAxis = 0;
+  
+    // for (var c = 0; c < colors.length - 1; c++) {
+  
+    //     var colorDiff = colors[c + 1].stop - colors[c].stop;
+    
+    //     for (var i = 0; i < geometry.faces.length; i++) {
+    //         face = geometry.faces[i];
+    //         for (var v = 0; v < 3; v++) {
+    //             vertex = geometry.vertices[face[vertexIndices[v]]];
+    //             normalizedAxis = normalized.subVectors(vertex, bbox.min).divide(size)[axis];
+    //             if (reverse) {
+    //                 normalizedAxis = 1 - normalizedAxis;
+    //             }
+    //             if (normalizedAxis >= colors[c].stop && normalizedAxis <= colors[c + 1].stop) {
+    //                 var localNormalizedAxis = (normalizedAxis - colors[c].stop) / colorDiff;
+    //                 face.vertexColors[v] = colors[c].color.clone().lerp(colors[c + 1].color, localNormalizedAxis);
+    //             }
+    //         }
+    //     }
+    // }
+
+    colors = [];
+    for (let i = 0; i < geometry.attributes.position.count; i++) {
+        colors.push(Math.random(), Math.random(), Math.random());
+    }
+    geometry.setAttribute('color',
+        new THREE.BufferAttribute(new Float32Array(colors), 3));
+  
+}
+  
 
 
 // create the stage
