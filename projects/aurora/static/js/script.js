@@ -54,6 +54,7 @@ let cols = [{
 // callback for when DOM is loaded
 document.addEventListener("DOMContentLoaded", function() { 
 
+    console.log("DOM loaded")
     // setup the stage
     // create_stage();
 
@@ -66,6 +67,8 @@ document.addEventListener("DOMContentLoaded", function() {
     setup_scene();
     create_auroras();
     animate(0);
+
+    console.log("main end")
 });
 
 
@@ -89,6 +92,8 @@ function create_display() {
 
     let container = document.getElementById("stage-container");
 
+    console.log("initial container size: width: ", container.offsetWidth, "height: ", container.offsetHeight);
+    
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.1, 1000);
     
@@ -116,6 +121,8 @@ function resize_display_if_needed() {
     if (width === renderer.domElement.width && height === renderer.domElement.height) {
         return;
     }
+
+    console.log("changing size to width: ", width, "height: ", height);
     
     // resize renderer and camera aspect ratio
     renderer.setSize(width, height, false);
