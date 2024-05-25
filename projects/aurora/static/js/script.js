@@ -1,7 +1,6 @@
 
 import * as THREE from "three";  
-// import { TrackballControls } from "three/addons/controls/TrackballControls.js";
-// import { FirstPersonControls } from "three/addons/controls/FirstPersonControls.js";
+import { TrackballControls } from "three/addons/controls/TrackballControls.js";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
 import FastNoiseLite from "fastnoise-lite";
 
@@ -11,6 +10,9 @@ let camera = null;
 let renderer = null;
 let controls = null;
 let clock = null;
+
+let camera_height_offset = 0.1;
+let use_pointer_controls = true;
 
 // animation variables
 let step = 0;
@@ -43,14 +45,21 @@ let num_stars = 500;
 let star_min_size = 0.2;
 let star_max_size = 0.4;
 let star_exclusion_bound1 = {x:-150, y:0, z:-150};
-let star_exclusion_bound2 = {x:150, y:300, z:150};
+let star_exclusion_bound2 = {x:150, y:200, z:150};
 let star_inclusion_bound1 = {x:-250, y:0, z:-250};
-let star_inclusion_bound2 = {x:250, y:400, z:250};
+let star_inclusion_bound2 = {x:250, y:300, z:250};
+
+// terrain variables
+let terrain_mesh = null;
+let num_terrain_parts = 100;
+let terrain_size = 100;
+let terrain_scale_inner = 10;
+let terrain_scale_outer = 1;
 
 // color variables
 let sky_color = 0x0c1b2e;
 let ground_color = 0x574032;
-let rock_color = 0x444444;
+let rock_color = 0x888888;
 let star_color = 0xFFFFFF;
 
 // movement control variables for PointerLockControls
@@ -104,7 +113,7 @@ function create_display() {
 
     // setup camera
     camera = new THREE.PerspectiveCamera(75, container.offsetWidth / container.offsetHeight, 0.001, 1000);
-    camera.position.set(0,0.15,1);
+    camera.position.set(0, camera_height_offset, 1);
     camera.up = new THREE.Vector3(0,1,0);
     camera.lookAt(new THREE.Vector3(0,0,0));
 
@@ -115,19 +124,22 @@ function create_display() {
     renderer.domElement.style.width = "";
     renderer.domElement.style.height = "";
 
-    // setup trackball controls
-    // controls = new TrackballControls(camera, renderer.domElement);
-    controls = new PointerLockControls(camera, renderer.domElement);
-    container.addEventListener("click", function() {
-        controls.lock();
-    });
+    // setup controls
+    if (use_pointer_controls) {
+        controls = new PointerLockControls(camera, renderer.domElement);
+        container.addEventListener("click", function() {
+            controls.lock();
+        });
+    } else {
+        controls = new TrackballControls(camera, renderer.domElement);
+    }
 
     // setup light
     let ambient_light = new THREE.AmbientLight(0xFFFFFF, 0.1);
     scene.add(ambient_light);
     
     let directional_light = new THREE.DirectionalLight(0xFFFFFF, 0.5);
-    directional_light.position.set(0, 2, -2);
+    directional_light.position.set(0, 2, -1);
     scene.add(directional_light);
 
     // setup clock
@@ -158,18 +170,17 @@ function resize_display_if_needed() {
 }
 
 
+// function to get the noise value
+function get_aurora_noise(a, b, offset) {
+    return noise.GetNoise(a*aurora_scale_inner, b*aurora_scale_inner+offset) * aurora_scale_outer;
+}
+
+
 // calculate points for aurora
 function calc_aurora_parts(origin_ratio, offset) {
 
     let points = [];
     let colors = [];
-
-    // function to get the noise value
-    function get_noise(a, b, offset) {
-        return noise.GetNoise(a*aurora_scale_inner, b*aurora_scale_inner+offset) * aurora_scale_outer;
-    }
-
-
 
     // calculate point coordinate information based on provided variables
     let x_origin = origin_ratio * Math.abs(aurora_placement_bound2.x - aurora_placement_bound1.x) + aurora_placement_bound1.x;
@@ -177,7 +188,7 @@ function calc_aurora_parts(origin_ratio, offset) {
 
     // calculate coordinates for first point
     let z_prev = aurora_placement_bound1.z;
-    let noise_val = get_noise(x_origin, z_prev, offset);
+    let noise_val = get_aurora_noise(x_origin, z_prev, offset);
     let x_prev = x_origin + noise_val;
 
     // width of the aurora mesh
@@ -202,7 +213,7 @@ function calc_aurora_parts(origin_ratio, offset) {
     for (let i = 1; i < num_points_per_aurora; i++) {
 
         let z_next = (i / num_points_per_aurora) * z_dist + aurora_placement_bound1.z;
-        let noise_val = get_noise(x_origin, z_next, offset);
+        let noise_val = get_aurora_noise(x_origin, z_next, offset);
         let x_next = x_origin + noise_val;
 
         let next_width_half = aurora_width * ((noise_val + 1) / 2) / 2;
@@ -328,28 +339,94 @@ function create_auroras() {
 }
 
 
+// function to get the noise value
+function get_terrain_noise(a, b, offset) {
+    return noise.GetNoise(a*terrain_scale_inner, b*terrain_scale_inner+offset) * terrain_scale_outer;
+}
+
+
+// calculate points and items for terrain object
+function calc_terrain_parts() {
+
+    let points = [];
+    let colors = [];
+
+    for (let xi = 0; xi < num_terrain_parts - 1; xi++) {
+        for (let yi = 0; yi < num_terrain_parts - 1; yi++) {
+
+            let x = xi * terrain_size / num_terrain_parts - (terrain_size/2);
+            let y = yi * terrain_size / num_terrain_parts - (terrain_size/2);
+            let next_x = (xi + 1) * terrain_size / num_terrain_parts - (terrain_size/2);
+            let next_y = (yi + 1) * terrain_size / num_terrain_parts - (terrain_size/2);
+
+            let p1 = {x:x, y:y};
+            let p2 = {x:next_x, y:y};
+            let p3 = {x:next_x, y:next_y};
+            let p4 = {x:x, y:next_y};
+
+            let noise1 = get_terrain_noise(p1.x, p1.y, 0);
+            let noise2 = get_terrain_noise(p2.x, p2.y, 0);
+            let noise3 = get_terrain_noise(p3.x, p3.y, 0);
+            let noise4 = get_terrain_noise(p4.x, p4.y, 0);
+
+            // triangle 1
+            points.push(p4.x, noise4, p4.y);
+            points.push(p2.x, noise2, p2.y);
+            points.push(p1.x, noise1, p1.y);
+            colors.push(1,1,1,1, 1,1,1,1, 1,1,1,1);
+
+            // triangle 2
+            points.push(p4.x, noise4, p4.y);
+            points.push(p3.x, noise3, p3.y);
+            points.push(p2.x, noise2, p2.y);
+            colors.push(1,1,1,1, 1,1,1,1, 1,1,1,1);
+        }
+    }
+
+    return {
+        points:points,
+        colors:colors
+    };
+}
+
+
 // create terrain mesh
 function create_terrain() {
 
-    // create the material and geometry for the ground
+    // create the material for the ground
     let material = new THREE.MeshPhongMaterial({
-        color: ground_color,
-        side: THREE.DoubleSide
+        // color: ground_color,
+        side: THREE.DoubleSide,
+        vertexColors: true
     });
-    let geometry = new THREE.PlaneGeometry(100, 100);
 
-    // create and rotate the mesh
-    let mesh = new THREE.Mesh(geometry, material)
-    mesh.rotation.x = -90 * Math.PI / 180;
+    // create simple plane as the ground
+    // let geometry = new THREE.PlaneGeometry(100, 100);
+    // // create and rotate the mesh
+    // let mesh = new THREE.Mesh(geometry, material);
+    // mesh.rotation.x = -90 * Math.PI / 180;
 
+    // calculate terrain geometry points and colors
+    let terrain_info = calc_terrain_parts();
+
+    // create the geometry and mesh for the line
+    let geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(terrain_info.points), 3))
+    geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(terrain_info.colors), 4));
+    geometry.computeVertexNormals();
+    geometry.attributes.position.needsUpdate = true;
+    let mesh = new THREE.Mesh(geometry, material);
+    
     // add the mesh to the scene
     scene.add(mesh)
+
+    terrain_mesh = mesh;
 }
 
 
 // create rock meshes
 function create_rocks() {
-    
+
     // create the material for the rocks
     let material = new THREE.MeshPhongMaterial({
         color: rock_color
@@ -366,6 +443,12 @@ function create_rocks() {
         let x = rand_in_range(rock_placement_bound1.x, rock_placement_bound2.x);
         let y = rand_in_range(rock_placement_bound1.y, rock_placement_bound2.y);
         let z = rand_in_range(rock_placement_bound1.z, rock_placement_bound2.z);
+
+        // place the rock on the terrain
+        let intersection = find_vertical_intersection(new THREE.Vector3(x, y, z), terrain_mesh);
+        if (intersection !== null) {
+            y = intersection.y;
+        }
 
         // create the geometry
         let geometry = new THREE.BoxGeometry(size_x, size_y, size_z);
@@ -410,7 +493,7 @@ function create_stars() {
 
         // create the geometry
         let geometry = new THREE.BoxGeometry(size_x, size_y, size_z);
-        geometry.translate(x, y+size_y/2, z);
+        geometry.translate(point.x, point.y, point.z);
         
         // add the mesh to the scene
         let mesh = new THREE.Mesh(geometry, material);
@@ -446,25 +529,65 @@ function animate(time) {
         geometry.attributes.position.needsUpdate = true;
     }
 
-    // PointerLockControls movement
-    if (key_map["KeyW"] || key_map["ArrowUp"]) {
-        controls.moveForward(delta * movement_speed);
-    }
-    if (key_map["KeyS"] || key_map["ArrowDown"]) {
-        controls.moveForward(-delta * movement_speed);
-    }
-    if (key_map["KeyA"] || key_map["ArrowLeft"]) {
-        controls.moveRight(-delta * movement_speed);
-    }
-    if (key_map["KeyD"] || key_map["ArrowRight"]) {
-        controls.moveRight(delta * movement_speed);
+    // update controls
+    if (use_pointer_controls) {
+
+        let sprint_mult = key_map["ShiftLeft"] ? 2 : 1;
+        
+        // PointerLockControls movement
+        if (key_map["KeyW"] || key_map["ArrowUp"]) {
+            controls.moveForward(delta * movement_speed * sprint_mult);
+        }
+        if (key_map["KeyS"] || key_map["ArrowDown"]) {
+            controls.moveForward(-delta * movement_speed * sprint_mult);
+        }
+        if (key_map["KeyA"] || key_map["ArrowLeft"]) {
+            controls.moveRight(-delta * movement_speed * sprint_mult);
+        }
+        if (key_map["KeyD"] || key_map["ArrowRight"]) {
+            controls.moveRight(delta * movement_speed * sprint_mult);
+        }
+
+        // calculate camera position based on terrain height
+        let intersection = find_vertical_intersection(camera.position, terrain_mesh);
+        if (intersection !== null) {
+            camera.position.setY(intersection.y + camera_height_offset);
+        }
+
+    } else {
+        controls.update(time - last_time);
     }
 
-    // update controls and animation changes
-    // controls.update(time - last_time);
+    // render the scene
 	renderer.render(scene, camera);
     
     last_time = time;
+}
+
+
+// get the vertical intersection of a point and mesh
+function find_vertical_intersection(point, mesh) {
+
+    if (point === null || mesh === null) {
+        return null;
+    }
+        
+    let up = new THREE.Vector3(0, 1, 0).normalize();
+    let down = new THREE.Vector3(0, -1, 0).normalize();
+   
+    let up_ray = new THREE.Raycaster(point, up);
+    let down_ray = new THREE.Raycaster(point, down);
+    
+    let up_intersection = up_ray.intersectObject(mesh);
+    let down_intersection = down_ray.intersectObject(mesh);
+
+    if (up_intersection.length > 0) {
+        return up_intersection[0].point;
+    } else if (down_intersection.length > 0) {
+        return down_intersection[0].point;
+    }
+
+    return null;
 }
 
 
