@@ -51,17 +51,25 @@ let star_inclusion_bound2 = {x:250, y:300, z:250};
 
 // terrain variables
 let terrain_mesh = null;
-let num_terrain_parts = 100;
+let num_terrain_parts = 50;
+let num_terrain_octaves = 3;
 let terrain_size = 100;
 let terrain_scale_inner = 4;
-let terrain_scale_outer = 12;
+let terrain_scale_outer = 10;
 let terrain_flat_center_radius = 10;
 
 // color variables
 let sky_color = 0x0c1b2e;
-let ground_color = 0x574032;
 let rock_color = 0x888888;
 let star_color = 0xFFFFFF;
+let terrain_colors = [
+    0xC1AC9D, // sand
+    0xD6CCBC, // brighter sand
+    0xA0A479, // yellow green
+    0x6A854F, // green
+    0x62785D, // forest green,
+    0xFFFFFF, // snow
+];
 
 // movement control variables for PointerLockControls
 let key_map = {};
@@ -136,10 +144,10 @@ function create_display() {
     }
 
     // setup light
-    let ambient_light = new THREE.AmbientLight(0xFFFFFF, 0.1);
+    let ambient_light = new THREE.AmbientLight(0xFFFFFF, 0.05);
     scene.add(ambient_light);
     
-    let directional_light = new THREE.DirectionalLight(0xFFFFFF, 0.5);
+    let directional_light = new THREE.DirectionalLight(0xFFFFFF, 0.25);
     directional_light.position.set(0, 2, -1);
     scene.add(directional_light);
 
@@ -345,25 +353,49 @@ function get_terrain_noise(a, b, offset) {
 
     let dist = calc_dist({x:0, y:0}, {x:a, y:b});
     // TODO: multiplier function could be better
-    // let mult = Math.log2(0.15 * dist+1);
-    // let mult = calc_sigmoid(dist * 2, 10) * 2;
-    let mult = dist / terrain_size;
-    let noise_val = noise.GetNoise(a*terrain_scale_inner, b*terrain_scale_inner+offset) * terrain_scale_outer;
+    // let dist_scale = Math.log2(0.15 * dist+1);
+    // let dist_scale = calc_sigmoid(dist * 2, 10) * 2;
+    let dist_scale = dist / (terrain_size / 2);
+    
+    let noise_val = 0;
+    let amp_sum = 0;
+    for (let oi = 0; oi < num_terrain_octaves; oi++) {
+        let pow = Math.pow(2, oi);
+        amp_sum += (1 / pow);
+        noise_val += (1 / pow) * (((noise.GetNoise(pow*a*terrain_scale_inner, pow*b*terrain_scale_inner+offset) + 1) / 2));
+    }
+    noise_val /= amp_sum;
+
+    // use the noise val to determine the color
+    let color = null;
+    if (noise_val < 0.1) color = terrain_colors[0];
+    else if (noise_val < 0.2) color = terrain_colors[1];
+    else if (noise_val < 0.5) color = terrain_colors[2];
+    else if (noise_val < 0.7) color = terrain_colors[3];
+    else if (noise_val < 0.9) color = terrain_colors[4];
+    else color = terrain_colors[5];
+    
+    let rgb = hex_to_rgb(color.toString(16));
+    color = [rgb.r/255, rgb.g/255, rgb.b/255];
+    
+    noise_val *= dist_scale;
+    noise_val = Math.pow(noise_val, 2);
+    noise_val *= terrain_scale_outer;
 
     // make a flat circle in the center
     if (dist < terrain_flat_center_radius) {
-        return 0;
+        noise_val = 0;
     }
     
-    // calculate the result
-    let result = noise_val * mult;
-
     // cutoff any negative results
-    if (result < 0) {
-        result = 0;
+    if (noise_val < 0) {
+        noise_val = 0;
     }
 
-    return result;
+    return {
+        noise: noise_val,
+        color: color
+    };
 }
 
 
@@ -392,22 +424,22 @@ function calc_terrain_parts() {
             let noise4 = get_terrain_noise(p4.x, p4.y, 0);
 
             // triangle 1
-            points.push(p4.x, noise4, p4.y);
-            points.push(p2.x, noise2, p2.y);
-            points.push(p1.x, noise1, p1.y);
-            colors.push(1,1,1,1, 1,1,1,1, 1,1,1,1);
+            points.push(p4.x, noise4.noise, p4.y);
+            points.push(p2.x, noise2.noise, p2.y);
+            points.push(p1.x, noise1.noise, p1.y);
+            colors.push(...noise4.color, ...noise2.color, ...noise1.color);
 
             // triangle 2
-            points.push(p4.x, noise4, p4.y);
-            points.push(p3.x, noise3, p3.y);
-            points.push(p2.x, noise2, p2.y);
-            colors.push(1,1,1,1, 1,1,1,1, 1,1,1,1);
+            points.push(p4.x, noise4.noise, p4.y);
+            points.push(p3.x, noise3.noise, p3.y);
+            points.push(p2.x, noise2.noise, p2.y);
+            colors.push(...noise4.color, ...noise3.color, ...noise2.color);
         }
     }
 
     return {
-        points:points,
-        colors:colors
+        points: points,
+        colors: colors
     };
 }
 
@@ -417,16 +449,9 @@ function create_terrain() {
 
     // create the material for the ground
     let material = new THREE.MeshPhongMaterial({
-        // color: ground_color,
         side: THREE.DoubleSide,
         vertexColors: true
     });
-
-    // create simple plane as the ground
-    // let geometry = new THREE.PlaneGeometry(100, 100);
-    // // create and rotate the mesh
-    // let mesh = new THREE.Mesh(geometry, material);
-    // mesh.rotation.x = -90 * Math.PI / 180;
 
     // calculate terrain geometry points and colors
     let terrain_info = calc_terrain_parts();
@@ -434,7 +459,7 @@ function create_terrain() {
     // create the geometry and mesh for the line
     let geometry = new THREE.BufferGeometry();
     geometry.setAttribute("position", new THREE.BufferAttribute(new Float32Array(terrain_info.points), 3))
-    geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(terrain_info.colors), 4));
+    geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(terrain_info.colors), 3));
     geometry.computeVertexNormals();
     geometry.attributes.position.needsUpdate = true;
     let mesh = new THREE.Mesh(geometry, material);

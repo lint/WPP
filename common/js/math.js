@@ -126,3 +126,14 @@ function interpolate_colors(color1, color2, steps) {
 
     return interpolated_colors;
 }
+
+
+// convert hex string to rgb
+function hex_to_rgb(hex) {
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
