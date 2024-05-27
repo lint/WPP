@@ -1,6 +1,7 @@
 
 let stage = null;
-let main_layer = null;
+let tracer_layer = null;
+let body_layer = null;
 let bodies = [];
 let anim = null;
 
@@ -9,8 +10,11 @@ let stage_center = null;
 let show_tracers = true;
 let tracer_max_points = 10000;
 
+// track number of animation calls
+let tick = 0;
+
 // gravitational constant
-let g = 0.01;
+let g = 0.1;
 
 // callback for when DOM is loaded
 document.addEventListener("DOMContentLoaded", function() { 
@@ -19,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function() {
     create_stage();
 
     // create the objects
-    draw(main_layer);
+    draw();
 
     // animate the objects
     animate();
@@ -49,8 +53,11 @@ function create_stage() {
         y: main_y_offset
     });
 
-    main_layer = new Konva.Layer();
-    stage.add(main_layer);
+    tracer_layer = new Konva.Layer();
+    body_layer = new Konva.Layer();
+
+    stage.add(tracer_layer);
+    stage.add(body_layer);
 
     // calculate the stage center point
     stage_center = {x: 0, y: 0};
@@ -65,6 +72,8 @@ function animate() {
         let time = frame.time;
         let diff = frame.timeDiff;
         let frame_rate = frame.frameRate;
+
+        tick++;
 
         // iterate over every body
         for (let bi = 0; bi < bodies.length; bi++) {
@@ -87,18 +96,11 @@ function animate() {
             }
 
             // calculate new velocity and position for the body
-            body1.velocity = calc_point_add(body1.velocity, calc_point_mult_scalar(accel, diff));
-            body1.position = calc_point_add(body1.position, calc_point_mult_scalar(body1.velocity, diff));
+            // body1.velocity = calc_point_add(body1.velocity, calc_point_mult_scalar(accel, diff));
+            // body1.position = calc_point_add(body1.position, calc_point_mult_scalar(body1.velocity, diff));
+            body1.velocity = calc_point_add(body1.velocity, accel);
+            body1.position = calc_point_add(body1.position, body1.velocity);
             body1.shape.position(body1.position);
-
-            // TODO: handle this elsewhere
-            // update the tracer visibility if necessary
-            if (show_tracers && !body1.tracer_shape.visible()) {
-                body1.tracer_shape.show();
-            } else if (!show_tracers && body1.tracer_shape.visible()) {
-                body1.tracer_shape.hide();
-                body1.tracer_points = [];
-            }
 
             // update the tracer points
             if (show_tracers) {
@@ -111,13 +113,13 @@ function animate() {
             }
         }
 
-    }, main_layer);
+    });
     
     anim.start();
 }
 
 // draw objects on the stage
-function draw(parent) {
+function draw() {
 
     let body1 = {
         position: {...stage_center},
@@ -130,7 +132,7 @@ function draw(parent) {
         tracer_points: [],
         tracer_shape: null
     };
-    draw_body(body1, parent);
+    draw_body(body1);
     bodies.push(body1);
 
     let body2 = {
@@ -144,7 +146,7 @@ function draw(parent) {
         tracer_points: [],
         tracer_shape: null
     };
-    draw_body(body2, parent);
+    draw_body(body2);
     bodies.push(body2);
 
     let orbit_vel = calc_orbital_velocity(body2, body1);
@@ -152,8 +154,8 @@ function draw(parent) {
 }
 
 
-// adds a shape to a parent for a given body
-function draw_body(body, parent) {
+// draw a body to the stage
+function draw_body(body) {
 
     // remove previous shape if it exists
     if (body.shape != null) {
@@ -181,17 +183,25 @@ function draw_body(body, parent) {
         lineCap: "round"
     });
 
-    if (!show_tracers) {
-        tracer_shape.hide();
-    }
-
     // add the shapes to the parent
-    parent.add(body_shape);
-    parent.add(tracer_shape);
+    body_layer.add(body_shape);
+    tracer_layer.add(tracer_shape);
 
     // store the new shapes
     body.shape = body_shape;
     body.tracer_shape = tracer_shape;
+}
+
+
+// toggle the show tracers variable
+function toggle_show_tracers() {
+    show_tracers = !show_tracers;
+
+    if (show_tracers) {
+        tracer_layer.show();
+    } else {
+        tracer_layer.hide();
+    }
 }
 
 
