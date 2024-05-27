@@ -14,7 +14,7 @@ let tracer_max_points = 10000;
 let tick = 0;
 
 // gravitational constant
-let g = 0.1;
+let g = 0.0001;
 
 // callback for when DOM is loaded
 document.addEventListener("DOMContentLoaded", function() { 
@@ -80,18 +80,19 @@ function animate() {
             let body1 = bodies[bi];
             
             // do not update this position if it is static
-            if (body1.static) {
+            if (!body1.affected_by_gravity) {
                 continue;
             }
 
             // calculate the acceleration for the current body using all other bodies
             let accel = {x:0, y:0};
             for (let bj = 0; bj < bodies.length; bj++) {
-                if (bj === bi) {
+                let body2 = bodies[bj];
+
+                if (bj === bi || !body2.influences_gravity) {
                     continue;
                 }
 
-                let body2 = bodies[bj];
                 accel = calc_point_add(accel, calc_acceleration(body1, body2));
             }
 
@@ -118,39 +119,51 @@ function animate() {
     anim.start();
 }
 
+
 // draw objects on the stage
 function draw() {
 
-    let body1 = {
-        position: {...stage_center},
-        radius: 20,
-        fill: "white",
-        mass: 100,
-        velocity: {x:0, y:0},
-        static: true,
+    let body1 = create_body(1000, {...stage_center}, {x:0, y:0}, 10, "white", false, true, null);
+    let body2 = create_body(100, {x:stage_center.x + 50, y:stage_center.y}, {x:0, y:0}, 10, "red", true, true, body1);
+    let body3 = create_body(100, {x:stage_center.x + 100, y:stage_center.y}, {x:0, y:0}, 10, "red", true, true, body1);
+}
+
+
+// create new body object
+function create_body(mass=1, position={x:0, y:0}, velocity={x:0, y:0}, radius=10, fill="white", 
+    affected_by_gravity=true, influences_gravity=true, orbiting_body=null) {
+    
+    console.log("mass: ", mass, "position: ", position, "velocity: ", velocity, "radius: ", radius, "fill: ", fill, "affected_by_grav:", affected_by_gravity, "influences_gravity: ", influences_gravity, "orbiting_body: ", orbiting_body)
+
+    // create the body object
+    let body = {
+        position: position,
+        radius: radius,
+        fill: fill,
+        mass: mass,
+        velocity: velocity,
+        affected_by_gravity: affected_by_gravity,
+        influences_gravity: influences_gravity,
         shape: null,
         tracer_points: [],
         tracer_shape: null
     };
-    draw_body(body1);
-    bodies.push(body1);
 
-    let body2 = {
-        position: {x:stage_center.x + 50, y:stage_center.y},
-        radius: 10,
-        fill: "red",
-        mass: 1,
-        velocity: {x:0, y:-0.01},
-        static: false,
-        shape: null,
-        tracer_points: [],
-        tracer_shape: null
-    };
-    draw_body(body2);
-    bodies.push(body2);
+    // set the velocity to be orbiting around a provided body
+    if (orbiting_body !== null) {
+        let speed = calc_orbital_velocity(body, orbiting_body);
+        let direction = calc_perpendicular(calc_point_sub(orbiting_body.position, body.position));
 
-    let orbit_vel = calc_orbital_velocity(body2, body1);
-    body2.velocity.y = orbit_vel;
+        body.velocity = calc_point_mult_scalar(direction, speed);
+    }
+
+    // draw the created body
+    draw_body(body);
+
+    // add the body to the bodies array
+    bodies.push(body);
+
+    return body;
 }
 
 

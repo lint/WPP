@@ -115,6 +115,15 @@ function calc_normalize(v) {
 }
 
 
+// return a perpendicular unit vector for a given vector
+function calc_perpendicular(v) {
+    return calc_normalize({
+        x: v.y,
+        y: -v.x
+    });
+}
+
+
 // helper method to determine equality of floats 
 function floats_eq(f1, f2, tol=0.0001) {
     return Math.abs(f1 - f2) < tol
