@@ -6,6 +6,9 @@ let anim = null;
 
 let stage_center = null;
 
+let show_tracers = true;
+let tracer_max_points = 10000;
+
 // gravitational constant
 let g = 0.01;
 
@@ -72,8 +75,8 @@ function animate() {
                 continue;
             }
 
+            // calculate the acceleration for the current body using all other bodies
             let accel = {x:0, y:0};
-
             for (let bj = 0; bj < bodies.length; bj++) {
                 if (bj === bi) {
                     continue;
@@ -83,9 +86,29 @@ function animate() {
                 accel = calc_point_add(accel, calc_acceleration(body1, body2));
             }
 
+            // calculate new velocity and position for the body
             body1.velocity = calc_point_add(body1.velocity, calc_point_mult_scalar(accel, diff));
             body1.position = calc_point_add(body1.position, calc_point_mult_scalar(body1.velocity, diff));
             body1.shape.position(body1.position);
+
+            // TODO: handle this elsewhere
+            // update the tracer visibility if necessary
+            if (show_tracers && !body1.tracer_shape.visible()) {
+                body1.tracer_shape.show();
+            } else if (!show_tracers && body1.tracer_shape.visible()) {
+                body1.tracer_shape.hide();
+                body1.tracer_points = [];
+            }
+
+            // update the tracer points
+            if (show_tracers) {
+
+                if (body1.tracer_points.length >= tracer_max_points) {
+                    body1.tracer_points.splice(0, body1.tracer_points.length - tracer_max_points + 1);
+                }
+                body1.tracer_points.push({...body1.position});
+                body1.tracer_shape.points(flatten_points(body1.tracer_points));
+            }
         }
 
     }, main_layer);
@@ -103,7 +126,9 @@ function draw(parent) {
         mass: 100,
         velocity: {x:0, y:0},
         static: true,
-        shape: null
+        shape: null,
+        tracer_points: [],
+        tracer_shape: null
     };
     draw_body(body1, parent);
     bodies.push(body1);
@@ -115,7 +140,9 @@ function draw(parent) {
         mass: 1,
         velocity: {x:0, y:-0.01},
         static: false,
-        shape: null
+        shape: null,
+        tracer_points: [],
+        tracer_shape: null
     };
     draw_body(body2, parent);
     bodies.push(body2);
@@ -132,18 +159,39 @@ function draw_body(body, parent) {
     if (body.shape != null) {
         body.shape.destroy();
     }
+    if (body.tracer_shape != null) {
+        body.tracer_shape.destroy();
+    }
 
-    // construct a new shape and add it to the provided parent
-    let shape = new Konva.Circle({
+    // construct a new shape for the body and add it to the provided parent
+    let body_shape = new Konva.Circle({
         x: body.position.x,
         y: body.position.y,
         radius: body.radius,
         fill: body.fill
     });
-    parent.add(shape);
 
-    // store the new shape
-    body.shape = shape;
+    // construct a new shape for the body's tracer
+    let tracer_shape = new Konva.Line({
+        points: flatten_points(body.tracer_points),
+        stroke: "blue",
+        strokeWidth: 2,
+        closed: false,
+        lineJoin: "round",
+        lineCap: "round"
+    });
+
+    if (!show_tracers) {
+        tracer_shape.hide();
+    }
+
+    // add the shapes to the parent
+    parent.add(body_shape);
+    parent.add(tracer_shape);
+
+    // store the new shapes
+    body.shape = body_shape;
+    body.tracer_shape = tracer_shape;
 }
 
 
