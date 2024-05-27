@@ -85,6 +85,60 @@ function calc_sigmoid(z, k=1) {
 }
 
 
+// calculate a vector from one point to another point
+function calc_point_sub(p1, p2) {
+    return {x:p1.x - p2.x, y:p1.y - p2.y};
+}
+
+
+// calculate an addition of points
+function calc_point_add(p1, p2) {
+    return {x:p1.x + p2.x, y:p1.y + p2.y};
+}
+
+
+// calculate point times a scalar
+function calc_point_mult_scalar(p, s) {
+    return {x:p.x*s, y:p.y*s};
+}
+
+
+// calculate vector magnitude
+function calc_magnitude(v) {
+    return Math.sqrt(v.x*v.x + v.y*v.y);
+}
+
+
+// calculate normal vector
+function calc_normalize(v) {
+    return calc_point_mult_scalar(v, 1 / calc_magnitude(v));
+}
+
+
+// helper method to determine equality of floats 
+function floats_eq(f1, f2, tol=0.0001) {
+    return Math.abs(f1 - f2) < tol
+}
+
+
+// helper method to determine equality of floats
+function floats_leq(f1, f2, tol=0.0001) {
+    return f1 < f2 || floats_eq(f1, f2, tol);
+}
+
+
+// helper method to determine equality of floats
+function floats_geq(f1, f2, tol=0.0001) {
+    return f1 > f2 || floats_eq(f1, f2, tol);
+}
+
+
+// helper method to determine if coordinates are equal
+function points_eq(p1, p2, tol=0.0001) {
+    return floats_eq(p1.x, p2.x, tol) && floats_eq(p1.y, p2.y, tol);
+}
+
+
 // helper method to construct a flat path array from a list of points 
 function flatten_points(points) {
 
