@@ -16,6 +16,17 @@ let tick = 0;
 // gravitational constant
 let g = 0.0001;
 
+// variables to support panning on stages
+let pan_start_pointer_pos = null;
+let pan_start_stage_pos = null;
+let is_panning = false;
+let is_pan_attempted = false;
+let stage_scale_by = 1.05;
+const pan_min_dist = 5;
+
+let can_pan_enabled = true;
+let can_zoom_enabled = true;
+
 // callback for when DOM is loaded
 document.addEventListener("DOMContentLoaded", function() { 
 
@@ -61,6 +72,13 @@ function create_stage() {
 
     // calculate the stage center point
     stage_center = {x: 0, y: 0};
+
+    // setup callbacks for the main stage
+    stage.on("mousedown.pan", panning_stage_mousedown);
+    stage.on("mousemove.pan", panning_stage_mousemove);
+    stage.on("mouseleave.pan", panning_stage_mouseleave);
+    stage.on("mouseup.pan", panning_stage_mouseup);
+    stage.on("wheel.zoom", zooming_stage_wheel);
 }
 
 
@@ -245,3 +263,153 @@ function calc_acceleration(body1, body2) {
 function calc_orbital_velocity(body1, body2) {
     return Math.sqrt(g * body1.mass * body2.mass / calc_dist(body1.position, body2.position));
 }
+
+
+/* -------------------------- main stage panning support ------------------------- */
+
+
+// callback for detection of any mouse down events on the stage
+function panning_stage_mousedown(e) {
+
+    if (e.evt.button !== 0 || !can_pan_enabled) {
+        return;
+    }
+
+    is_pan_attempted = true;
+
+    // set panning start positions
+    pan_start_pointer_pos = stage.getPointerPosition();
+    pan_start_stage_pos = {
+        x: stage.x(),
+        y: stage.y()
+    };
+};
+
+
+// callback for detection of mouse movement events on the stage
+function panning_stage_mousemove(e) {
+
+    // do nothing if not currently panning
+    if (!is_pan_attempted || (!is_pan_attempted && !is_panning) || pan_start_pointer_pos === null || pan_start_stage_pos === null || !can_pan_enabled) {
+        return;
+    }
+
+    // get the current position of the pointer
+    let pan_end_pointer_pos = stage.getPointerPosition();
+
+    // find the difference in pointer positions
+    let pan_diff = {
+        x: pan_end_pointer_pos.x - pan_start_pointer_pos.x,
+        y: pan_end_pointer_pos.y - pan_start_pointer_pos.y 
+    };
+
+    // check if a pan has been attempted but not started
+    if (is_pan_attempted && !is_panning) {
+        
+        let dist = Math.hypot(pan_diff.x, pan_diff.y);
+
+        if (dist > pan_min_dist) {
+            is_panning = true;
+
+            // reset start pointer position to cleanly begin panning
+            pan_start_pointer_pos = pan_end_pointer_pos;
+            pan_diff = {
+                x: pan_end_pointer_pos.x - pan_start_pointer_pos.x,
+                y: pan_end_pointer_pos.y - pan_start_pointer_pos.y 
+            };
+        } else {
+            return;
+        }
+    }
+
+    // set the move cursor pointer
+    stage.container().style.cursor = "move";
+
+    let scale = stage.scaleX();
+
+    // convert the end pointer position to local coordinates
+    let pan_end_local = {
+        x: (pan_end_pointer_pos.x - pan_start_stage_pos.x) / scale,
+        y: (pan_end_pointer_pos.y - pan_start_stage_pos.y) / scale
+    };
+
+    // calculate the new stage position
+    let new_stage_pos = {
+        x: pan_end_pointer_pos.x - pan_end_local.x * scale + pan_diff.x,
+        y: pan_end_pointer_pos.y - pan_end_local.y * scale + pan_diff.y
+    };
+
+    stage.position(new_stage_pos);
+};
+
+
+// callback for detection of when the cursor moves out of the stage
+function panning_stage_mouseleave(e) {
+
+    // disable panning if it is enabled
+    if (is_panning || is_pan_attempted || !can_pan_enabled) {
+        pan_start_pointer_pos = null;
+        pan_start_stage_pos = null;
+        is_panning = false;
+        is_pan_attempted = false;
+    }
+
+    stage.container().style.cursor = "default";
+};
+
+
+// callback for detection of when the cursor is released in the stage
+function panning_stage_mouseup(e) {
+
+    // disable panning if it is enabled
+    if (is_panning || is_pan_attempted || !can_pan_enabled) {
+        pan_start_pointer_pos = null;
+        pan_start_stage_pos = null;
+        is_panning = false;
+        is_pan_attempted = false;
+    }
+
+    stage.container().style.cursor = "default";
+};
+
+
+/* -------------------------- main stage zooming support ------------------------- */
+
+
+// callback for when wheel movement detected on main stage
+function zooming_stage_wheel(e) {
+    
+    // stop default scrolling
+    e.evt.preventDefault();
+
+    if (is_panning || !can_zoom_enabled) {
+        return;
+    }
+
+    let old_scale = stage.scaleX();
+    let pointer = stage.getPointerPosition();
+
+    let stage_coords = {
+        x: (pointer.x - stage.x()) / old_scale,
+        y: (pointer.y - stage.y()) / old_scale,
+    };
+
+    // how to scale? Zoom in? Or zoom out?
+    let direction = e.evt.deltaY > 0 ? -1 : 1;
+
+    // when we zoom on trackpad, e.evt.ctrlKey is true
+    // in that case lets revert direction
+    if (e.evt.ctrlKey) {
+        direction = -direction;
+    }
+
+    let new_scale = direction > 0 ? old_scale * stage_scale_by : old_scale / stage_scale_by;
+
+    stage.scale({ x: new_scale, y: new_scale });
+
+    let new_pos = {
+        x: pointer.x - stage_coords.x * new_scale,
+        y: pointer.y - stage_coords.y * new_scale,
+    };
+    stage.position(new_pos);
+};
