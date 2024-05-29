@@ -14,12 +14,17 @@ let tracer_max_points = 10000;
 let tick = 0;
 
 // gravitational constant
-let g = 0.001;
+let g = 0.01;
 
 // store planets
 let planets = [
 
 ];
+
+// scale parameters for relative sizing and distances
+let body_radius_scale = (x) => Math.log(x/2+1)*10;
+let body_dist_scale = 1000;
+let body_mass_scale = 1;
 
 // variables to support panning on stages
 let pan_start_pointer_pos = null;
@@ -32,14 +37,15 @@ const pan_min_dist = 5;
 let can_pan_enabled = true;
 let can_zoom_enabled = true;
 
+
 // callback for when DOM is loaded
 document.addEventListener("DOMContentLoaded", function() { 
 
     // setup the stage
     create_stage();
 
-    // create the objects
-    draw();
+    // create the objects in the solar system
+    create_solar_system();
 
     // animate the objects
     animate();
@@ -143,38 +149,159 @@ function animate() {
 }
 
 
-// draw objects on the stage
-function draw() {
+// create bodies for each planet in the solar system
+function create_solar_system() {
 
-    let body1 = create_body({
-        mass: 10000, 
+    let sun = create_body({
+        mass: 333000, 
         position: {...stage_center},
-        velocity: {x:0, y:0},
         affected_by_gravity: false,
         influences_gravity: true,
     }, {
-        radius: 10,
+        radius: 109,
         fill: "white", 
-    }, {
-        body: null,
-        distance: 0,
-        angle: 0, 
-        clockwise: true,
-        starting_percent: 1
     });
 
-    create_body({
+    let mercury = create_body({
+        mass: 0.055, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 0.3829,
+        fill: "#8C8686", 
+    }, {
+        body: sun,
+        perigee_distance: 0.307499,
+        apogee_distance: 0.466697,
+        angle: 29.124 * Math.PI / 180, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let venus = create_body({
+        mass: 0.902, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 0.9499,
+        fill: "#ECE9E0", 
+    }, {
+        body: sun,
+        perigee_distance: 0.718440,
+        apogee_distance: 0.728213,
+        angle: 54.884 * Math.PI / 180, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let earth = create_body({
         mass: 1, 
         affected_by_gravity: true,
         influences_gravity: true,
     }, {
-        radius: 10,
-        fill: "red", 
+        radius: 1,
+        fill: "blue", 
     }, {
-        body: body1,
-        perigee_distance: 50,
-        apogee_distance: 100,
+        body: sun,
+        perigee_distance: 1,
+        apogee_distance: 1,
         angle: 0, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let mars = create_body({
+        mass: 0.107, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 1,
+        fill: "#C5966D", 
+    }, {
+        body: sun,
+        perigee_distance: 1.3814,
+        apogee_distance: 1.66621,
+        angle: 286.5 * Math.PI / 180, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let jupiter = create_body({
+        mass: 317.8, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 10.973,
+        fill: "#B69783", 
+    }, {
+        body: sun,
+        perigee_distance: 4.9506,
+        apogee_distance: 5.4570,
+        angle: 273.867 * Math.PI / 180, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let saturn = create_body({
+        mass: 95.159, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 9.1402,
+        fill: "#EAC881", 
+    }, {
+        body: sun,
+        perigee_distance: 9.0412,
+        apogee_distance: 10.1238,
+        angle: 339.392 * Math.PI / 180, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let uranus = create_body({
+        mass: 14.536, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 4.007,
+        fill: "#C5DEEB", 
+    }, {
+        body: sun,
+        perigee_distance: 18.2861,
+        apogee_distance: 20.0965,
+        angle: 96.998857 * Math.PI / 180, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let neptune = create_body({
+        mass: 17.147, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 3.883,
+        fill: "#A0C0CF", 
+    }, {
+        body: sun,
+        perigee_distance: 29.81,
+        apogee_distance: 30.33,
+        angle: 273.187 * Math.PI / 180, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    let pluto = create_body({
+        mass: 0.00218, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 0.1868,
+        fill: "#C0B7A8", 
+    }, {
+        body: sun,
+        perigee_distance: 29.658,
+        apogee_distance: 49.305,
+        angle: 113.834 * Math.PI / 180, 
         clockwise: true,
         starting_percent: 0
     });
@@ -197,9 +324,9 @@ function create_body(body_info, display_info, orbit_info=null) {
     
     // create the body object
     let body = {
-        mass: mass,
+        mass: mass * body_mass_scale,
         position: position,
-        radius: radius,
+        radius: body_radius_scale(radius),
         fill: fill,
         velocity: velocity,
         affected_by_gravity: affected_by_gravity,
@@ -216,6 +343,9 @@ function create_body(body_info, display_info, orbit_info=null) {
         let apogee_distance = "apogee_distance" in orbit_info ? orbit_info.apogee_distance : 50;
         let perigee_distance = "perigee_distance" in orbit_info ? orbit_info.perigee_distance : 50;
         let starting_percent = "starting_percent" in orbit_info ? orbit_info.starting_percent : 1;
+
+        apogee_distance *= body_dist_scale;
+        perigee_distance *= body_dist_scale;
 
         let orbit = calc_initial_orbit(body.mass, orbit_info.body, perigee_distance, apogee_distance, angle, starting_percent, clockwise, true);
         body.velocity = orbit.velocity;
