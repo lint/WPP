@@ -13,18 +13,24 @@ let tracer_max_points = 10000;
 // track number of animation calls
 let tick = 0;
 
+// scale the time per tick
+let time_scale = 10;
+
 // gravitational constant
-let g = 0.01;
+let g = 0.00000001;
 
 // store planets
 let planets = [
 
 ];
 
+// define colors
+let tracer_color = "gray";
+
 // scale parameters for relative sizing and distances
-let body_radius_scale = (x) => Math.log(x/2+1)*10;
+let body_radius_scale = (x) => Math.log(x/2+1)*50;
 let body_dist_scale = 1000;
-let body_mass_scale = 1;
+let body_mass_scale = 100;
 
 // variables to support panning on stages
 let pan_start_pointer_pos = null;
@@ -46,6 +52,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // create the objects in the solar system
     create_solar_system();
+
+    // scale various aspects of the view
+    scale_stage_to_fit_body(4);
+    update_tracer_size();
 
     // animate the objects
     animate();
@@ -93,6 +103,26 @@ function create_stage() {
 }
 
 
+// scale the stage to contain up to the given body
+function scale_stage_to_fit_body(ith_body) {
+
+    let num_bodies = Math.min(ith_body+1, bodies.length);
+    let max_dist = 0;
+
+    for (let bi = 0; bi < num_bodies; bi++) {
+        let body = bodies[bi];
+
+        let dist = calc_dist(body.position, stage_center);
+        if (dist > max_dist) {
+            max_dist = dist;
+        }
+    }
+
+    let scale = stage.width() / 2 / max_dist;
+    stage.scale({ x: scale, y: scale })
+}
+
+
 // animate circles
 function animate() {
 
@@ -126,10 +156,8 @@ function animate() {
             }
 
             // calculate new velocity and position for the body
-            // body1.velocity = calc_point_add(body1.velocity, calc_point_mult_scalar(accel, diff));
-            // body1.position = calc_point_add(body1.position, calc_point_mult_scalar(body1.velocity, diff));
-            body1.velocity = calc_point_add(body1.velocity, accel);
-            body1.position = calc_point_add(body1.position, body1.velocity);
+            body1.velocity = calc_point_add(body1.velocity, calc_point_mult_scalar(accel, time_scale));
+            body1.position = calc_point_add(body1.position, calc_point_mult_scalar(body1.velocity, time_scale));
             body1.shape.position(body1.position);
 
             // update the tracer points
@@ -384,7 +412,7 @@ function draw_body(body) {
     // construct a new shape for the body's tracer
     let tracer_shape = new Konva.Line({
         points: flatten_points(body.tracer_points),
-        stroke: "blue",
+        stroke: tracer_color,
         strokeWidth: 2,
         closed: false,
         lineJoin: "round",
@@ -398,6 +426,26 @@ function draw_body(body) {
     // store the new shapes
     body.shape = body_shape;
     body.tracer_shape = tracer_shape;
+}
+
+
+// update the stroke size of the tracers
+function update_tracer_size() {
+
+    let stage_size = stage.width();
+    let stage_scale = stage.scaleX();
+
+    let stroke = 2000 / stage_size / stage_scale;
+
+    for (let bi = 0; bi < bodies.length; bi++) {
+        let body = bodies[bi];
+        
+        if (body.tracer_shape == null) {
+            continue;
+        }
+
+        body.tracer_shape.strokeWidth(stroke);
+    }
 }
 
 
@@ -640,4 +688,7 @@ function zooming_stage_wheel(e) {
         y: pointer.y - stage_coords.y * new_scale,
     };
     stage.position(new_pos);
+
+    // update the orbit tracer size
+    update_tracer_size();
 };
