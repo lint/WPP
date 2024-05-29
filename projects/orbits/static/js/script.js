@@ -14,7 +14,12 @@ let tracer_max_points = 10000;
 let tick = 0;
 
 // gravitational constant
-let g = 0.0001;
+let g = 0.001;
+
+// store planets
+let planets = [
+
+];
 
 // variables to support panning on stages
 let pan_start_pointer_pos = null;
@@ -141,24 +146,61 @@ function animate() {
 // draw objects on the stage
 function draw() {
 
-    let body1 = create_body(1000, {...stage_center}, {x:0, y:0}, 10, "white", false, true, null);
-    let body2 = create_body(100, {x:stage_center.x + 50, y:stage_center.y}, {x:0, y:0}, 10, "red", true, true, body1);
-    let body3 = create_body(100, {x:stage_center.x + 100, y:stage_center.y}, {x:0, y:0}, 10, "red", true, true, body1);
+    let body1 = create_body({
+        mass: 10000, 
+        position: {...stage_center},
+        velocity: {x:0, y:0},
+        affected_by_gravity: false,
+        influences_gravity: true,
+    }, {
+        radius: 10,
+        fill: "white", 
+    }, {
+        body: null,
+        distance: 0,
+        angle: 0, 
+        clockwise: true,
+        starting_percent: 1
+    });
+
+    create_body({
+        mass: 1, 
+        affected_by_gravity: true,
+        influences_gravity: true,
+    }, {
+        radius: 10,
+        fill: "red", 
+    }, {
+        body: body1,
+        perigee_distance: 50,
+        apogee_distance: 100,
+        angle: 0, 
+        clockwise: true,
+        starting_percent: 0
+    });
 }
 
 
 // create new body object
-function create_body(mass=1, position={x:0, y:0}, velocity={x:0, y:0}, radius=10, fill="white", 
-    affected_by_gravity=true, influences_gravity=true, orbiting_body=null) {
-    
-    console.log("mass: ", mass, "position: ", position, "velocity: ", velocity, "radius: ", radius, "fill: ", fill, "affected_by_grav:", affected_by_gravity, "influences_gravity: ", influences_gravity, "orbiting_body: ", orbiting_body)
+function create_body(body_info, display_info, orbit_info=null) {
 
+    // get body info values if they are present
+    let mass = "mass" in body_info ? body_info.mass : 1;
+    let position = "position" in body_info ? body_info.position : {x:0, y:0};
+    let velocity = "velocity" in body_info ? body_info.velocity : {x:0, y:0};
+    let affected_by_gravity = "affected_by_gravity" in body_info ? body_info.affected_by_gravity : true;
+    let influences_gravity = "influences_gravity" in body_info ? body_info.influences_gravity : true;
+
+    // get display info values if they are present
+    let radius = "radius" in display_info ? display_info.radius : 10;
+    let fill = "fill" in display_info ? display_info.fill : "white";
+    
     // create the body object
     let body = {
+        mass: mass,
         position: position,
         radius: radius,
         fill: fill,
-        mass: mass,
         velocity: velocity,
         affected_by_gravity: affected_by_gravity,
         influences_gravity: influences_gravity,
@@ -167,12 +209,17 @@ function create_body(mass=1, position={x:0, y:0}, velocity={x:0, y:0}, radius=10
         tracer_shape: null
     };
 
-    // set the velocity to be orbiting around a provided body
-    if (orbiting_body !== null) {
-        let speed = calc_orbital_velocity(body, orbiting_body);
-        let direction = calc_perpendicular(calc_point_sub(orbiting_body.position, body.position));
+    if (orbit_info != null && orbit_info.body != null) {
 
-        body.velocity = calc_point_mult_scalar(direction, speed);
+        let angle = "angle" in orbit_info ? orbit_info.angle : 0;
+        let clockwise = "clockwise" in orbit_info ? orbit_info.clockwise : true;
+        let apogee_distance = "apogee_distance" in orbit_info ? orbit_info.apogee_distance : 50;
+        let perigee_distance = "perigee_distance" in orbit_info ? orbit_info.perigee_distance : 50;
+        let starting_percent = "starting_percent" in orbit_info ? orbit_info.starting_percent : 1;
+
+        let orbit = calc_initial_orbit(body.mass, orbit_info.body, perigee_distance, apogee_distance, angle, starting_percent, clockwise, true);
+        body.velocity = orbit.velocity;
+        body.position = orbit.position;
     }
 
     // draw the created body
@@ -259,9 +306,60 @@ function calc_acceleration(body1, body2) {
 }
 
 
+// calculate orbital velocity for a given body
+function calc_initial_orbit(orbiting_mass, orbited_body, perigee_distance, apogee_distance, rotation, starting_percent, clockwise=true) {
+
+    let position = calc_point_on_circle(orbited_body.position, perigee_distance, rotation);
+    let speed = calc_elliptical_orbital_speed(orbiting_mass, orbited_body.mass, perigee_distance, apogee_distance, perigee_distance);
+    let direction = calc_perpendicular(calc_point_sub(orbited_body.position, position));
+    let velocity = calc_point_mult_scalar(direction, speed);
+
+    if (!clockwise) {
+        velocity = calc_point_mult_scalar(velocity, -1);
+    }
+
+    // let semi_major_dist = (perigee_distance + apogee_distance) / 2;
+    // let semi_minor_dist = Math.sqrt(perigee_distance * apogee_distance);
+
+    // let start_angle = starting_percent * 2 * Math.PI;
+
+    // let x = semi_major_dist * Math.cos(start_angle) * Math.cos(rotation) - semi_minor_dist * Math.sin(start_angle) * Math.sin(rotation);
+    // let y = semi_major_dist * Math.cos(start_angle) * Math.sin(rotation) + semi_minor_dist * Math.sin(start_angle) * Math.cos(rotation);
+
+    // let position = {
+    //     x: x+orbited_body.position.x,
+    //     y: y+orbited_body.position.y
+    // };
+
+    // let dist = calc_dist(position, orbited_body.position);
+    // let speed = calc_elliptical_orbital_speed(orbiting_mass, orbited_body.mass, perigee_distance, apogee_distance, dist);
+    // let direction = calc_perpendicular(calc_point_sub(orbited_body.position, position));
+    // let velocity = calc_point_mult_scalar(direction, speed);
+
+    // console.log("perigree dist", perigee_distance, "apogee dist", apogee_distance, "dist: ", dist)
+
+    // if (!clockwise) {
+    //     velocity = calc_point_mult_scalar(velocity, -1);
+    // }
+
+    return {
+        velocity: velocity,
+        position: position,
+    };
+}
+
+
 // calculate orbital velocity (body1 is orbiting body2)
-function calc_orbital_velocity(body1, body2) {
-    return Math.sqrt(g * body1.mass * body2.mass / calc_dist(body1.position, body2.position));
+function calc_circular_orbital_speed(mass1, mass2, position1, position2) {
+    return Math.sqrt(g * mass1 * mass2 / calc_dist(position1, position2));
+}
+
+
+// calculate elliptical orbital velocity (body1 is orbiting body2)
+function calc_elliptical_orbital_speed(mass1, mass2, perigee_distance, apogee_distance, r) {
+    
+    let dist_sum = perigee_distance + apogee_distance;
+    return Math.sqrt(2 * g * mass1 * mass2 * ((1/r) - (1/dist_sum)));
 }
 
 
