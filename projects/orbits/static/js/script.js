@@ -57,6 +57,11 @@ document.addEventListener("DOMContentLoaded", function() {
     scale_stage_to_fit_body(4);
     update_tracer_size();
 
+    // execute physics steps many times
+    // for (let i = 0; i < 10; i++) {
+    //     execute_physics_step();
+    // }
+
     // animate the objects
     animate();
 });
@@ -123,6 +128,49 @@ function scale_stage_to_fit_body(ith_body) {
 }
 
 
+// step the physics calculations
+function execute_physics_step() {
+
+    tick++;
+
+    // iterate over every body
+    for (let bi = 0; bi < bodies.length; bi++) {
+        let body1 = bodies[bi];
+        
+        // do not update this position if it is static
+        if (!body1.affected_by_gravity) {
+            continue;
+        }
+
+        // calculate the acceleration for the current body using all other bodies
+        let accel = {x:0, y:0};
+        for (let bj = 0; bj < bodies.length; bj++) {
+            let body2 = bodies[bj];
+
+            if (bj === bi || !body2.influences_gravity) {
+                continue;
+            }
+
+            accel = calc_point_add(accel, calc_acceleration(body1, body2));
+        }
+
+        // calculate new velocity and position for the body
+        body1.velocity = calc_point_add(body1.velocity, calc_point_mult_scalar(accel, time_scale));
+        body1.position = calc_point_add(body1.position, calc_point_mult_scalar(body1.velocity, time_scale));
+        body1.shape.position(body1.position);
+
+        // update the tracer points
+        if (show_tracers) {
+
+            if (body1.tracer_points.length >= tracer_max_points) {
+                body1.tracer_points.splice(0, body1.tracer_points.length - tracer_max_points + 1);
+            }
+            body1.tracer_points.push({...body1.position});
+            body1.tracer_shape.points(flatten_points(body1.tracer_points));
+        }
+    }
+}
+
 // animate circles
 function animate() {
 
@@ -132,45 +180,8 @@ function animate() {
         let diff = frame.timeDiff;
         let frame_rate = frame.frameRate;
 
-        tick++;
-
-        // iterate over every body
-        for (let bi = 0; bi < bodies.length; bi++) {
-            let body1 = bodies[bi];
-            
-            // do not update this position if it is static
-            if (!body1.affected_by_gravity) {
-                continue;
-            }
-
-            // calculate the acceleration for the current body using all other bodies
-            let accel = {x:0, y:0};
-            for (let bj = 0; bj < bodies.length; bj++) {
-                let body2 = bodies[bj];
-
-                if (bj === bi || !body2.influences_gravity) {
-                    continue;
-                }
-
-                accel = calc_point_add(accel, calc_acceleration(body1, body2));
-            }
-
-            // calculate new velocity and position for the body
-            body1.velocity = calc_point_add(body1.velocity, calc_point_mult_scalar(accel, time_scale));
-            body1.position = calc_point_add(body1.position, calc_point_mult_scalar(body1.velocity, time_scale));
-            body1.shape.position(body1.position);
-
-            // update the tracer points
-            if (show_tracers) {
-
-                if (body1.tracer_points.length >= tracer_max_points) {
-                    body1.tracer_points.splice(0, body1.tracer_points.length - tracer_max_points + 1);
-                }
-                body1.tracer_points.push({...body1.position});
-                body1.tracer_shape.points(flatten_points(body1.tracer_points));
-            }
-        }
-
+        // execute the next physics step
+        execute_physics_step();
     });
     
     anim.start();
