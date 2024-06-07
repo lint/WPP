@@ -124,6 +124,57 @@ function calc_perpendicular(v) {
 }
 
 
+// helper function to calculate the intersection of two lines
+function calc_lines_intersection(l1, l2) {
+
+    let v1 = {
+        x: l1[1].x - l1[0].x,
+        y: l1[1].y - l1[0].y 
+    };
+
+    let v2 = {
+        x: l2[1].x - l2[0].x,
+        y: l2[1].y - l2[0].y 
+    };
+
+    let s = (-v1.y * (l1[0].x - l2[0].x) + v1.x * (l1[0].y - l2[0].y)) / (-v2.x * v1.y + v1.x * v2.y);
+    let t = ( v2.x * (l1[0].y - l2[0].y) - v2.y * (l1[0].x - l2[0].x)) / (-v2.x * v1.y + v1.x * v2.y);
+    
+    // intersection detected
+    if (s >= 0 && s <= 1 && t >= 0 && t <= 1) {
+        return {
+            x: l1[0].x + (t * v1.x),
+            y: l1[0].y + (t * v1.y)
+        };
+    }
+
+    return null;
+}
+
+
+// calculates a new end-point a given distance beyond a given line 
+function calc_line_extend_point(l1, l2, len) {
+    return calc_point_translation(l2, l1, l2, len);
+}
+
+
+// translates a point in the direction of a line by a given length
+function calc_point_translation(p, l1, l2, len) {
+
+    if (points_eq(l1, l2)) {
+        return p;
+    }
+
+
+    let dist = calc_dist(l1, l2);
+
+    return {
+        x: p.x + (l2.x - l1.x) / dist * len,
+        y: p.y + (l2.y - l1.y) / dist * len
+    };
+}
+
+
 // helper method to determine equality of floats 
 function floats_eq(f1, f2, tol=0.0001) {
     return Math.abs(f1 - f2) < tol

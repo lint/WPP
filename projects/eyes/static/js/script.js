@@ -14,11 +14,13 @@ let num_eyes = 1000;
 
 // define eye shape variables
 let eye_padding = 5;
+let eye_look_radius_ratio = 0.25;
+let eye_iris_size_ratio = 0.8;
+let eye_iris_move_speed = 1;
 let eye_horz_edge_weight = 0.5;
 let eye_vert_edge_weight = 1;
 let eye_horz_center_weight = 1 - eye_horz_edge_weight;
 let eye_vert_center_weight = 1 - eye_vert_edge_weight;
-let eye_iris_ratio = 0.8;
 let eye_min_width = 50;
 let eye_max_width = 100;
 let eye_min_height = 20;
@@ -196,7 +198,9 @@ function create_eye() {
         blink_percentage: 0,
         blink_duration: rand_in_range(eye_min_blink_duration, eye_max_blink_duration),
         blink_next_time: Date.now() + blink_interval * Math.random() * 5,
-        blink_interval: blink_interval
+        blink_interval: blink_interval,
+        iris_target_pos: {x: x, y: y},
+        iris_current_pos: {x: x, y: y}
     };
 
     // define group to contain the eye shapes
@@ -215,9 +219,9 @@ function create_eye() {
     eye_info.shapes.sclera = sclera;
 
     let iris = new Konva.Circle({
-        x: eye_info.x, 
-        y: eye_info.y, 
-        radius: eye_info.height/2 * eye_iris_ratio,
+        x: eye_info.iris_current_pos.x, 
+        y: eye_info.iris_current_pos.y, 
+        radius: eye_info.height/2 * eye_iris_size_ratio,
         fill: "black"
     }) 
     group.add(iris);
@@ -242,6 +246,7 @@ function update_eye_shape(eye_info) {
     }
 
     // calculate eye bounding box
+    let center = {x: eye_info.x, y: eye_info.y};
     let left = {x: eye_info.x-eye_info.width/2, y:eye_info.y};
     let right = {x: eye_info.x+eye_info.width/2, y:eye_info.y};
     let up = {x: eye_info.x, y: (eye_info.y-eye_info.height/2) + eye_info.height/2*eye_info.blink_percentage};
@@ -290,6 +295,50 @@ function update_eye_shape(eye_info) {
 
     eye_info.shapes.sclera.sceneFunc(shape_func);
     // eye_info.shapes.group.clipFunc(shape_func);
+
+    // get pointer position on stage
+    let pointer = stage.getPointerPosition();
+    if (pointer === null) {
+        return;
+    }
+
+    // calculate stage coordinates for the pointer
+    let pointer_stage_coords = {
+        x: (pointer.x - stage.x()) / stage.scaleX(),
+        y: (pointer.y - stage.y()) / stage.scaleX(),
+    };
+    let line_to_pointer = [center, pointer_stage_coords];
+
+    // set position of the iris to eye center by default
+    let iris_target_pos = center;
+
+    // check if eye is within look radius 
+    if (calc_dist(center, pointer_stage_coords) < Math.max(stage.width(), stage.height()) * eye_look_radius_ratio) {
+        
+        // calculate bounding rhombus lines
+        let bounding_rhom = [[left, up], [up, right], [right, down], [down, left]];
+        let intersection = null;
+        for (let line of bounding_rhom) {
+    
+            intersection = calc_lines_intersection(line, line_to_pointer);
+            if (intersection !== null) {
+                iris_target_pos = calc_line_extend_point(center, intersection, (eye_info.height/2 * eye_iris_size_ratio) / -2);
+                break;
+            }
+        }
+    }
+
+    // set new iris target position
+    eye_info.iris_target_pos = iris_target_pos;
+
+    // calculate the current position for the iris
+    let dist_to_target = calc_dist(iris_target_pos, eye_info.iris_current_pos);
+    eye_info.iris_current_pos = calc_line_extend_point(iris_target_pos, eye_info.iris_current_pos, -1 * eye_iris_move_speed);
+
+    // adjust iris to the current position
+    if (dist_to_target > 0.5) { // arbitrary number to allow smooth movement without idle jittering
+        eye_info.shapes.iris.position(eye_info.iris_current_pos);
+    }
 }
 
 
