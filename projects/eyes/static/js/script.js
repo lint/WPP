@@ -38,8 +38,12 @@ let eye_vert_center_weight = 1 - eye_vert_edge_weight;
 let eye_iris_ratio = 0.9;
 let eye_min_height = 50;
 let eye_max_height = 100;
-let eye_min_width = 100;
+let eye_min_width = 150;
 let eye_max_width = 200;
+let eye_min_blink_interval = 1000;
+let eye_max_blink_interval = 10000;
+let eye_min_blink_duration = 300;
+let eye_max_blink_duration = 600;
 
 
 // callback for when DOM is loaded
@@ -132,8 +136,9 @@ function create_eyes() {
             iris: null
         },
         blink_percentage: 0,
-        blink_duration: 2000,
-        blink_next_time: Date.now() + 1000
+        blink_duration: rand_in_range(eye_min_blink_duration, eye_max_blink_duration),
+        blink_next_time: Date.now() + rand_in_range(eye_min_blink_interval, eye_max_blink_interval),
+        blink_interval: rand_in_range(eye_min_blink_interval, eye_max_blink_interval)
     };
 
     // define group to contain the eye shapes
@@ -173,6 +178,7 @@ function update_eye_shape(eye_info) {
     let blink_anim_time = Math.max((Date.now() - eye_info.blink_next_time) / eye_info.blink_duration, 0);
     if (blink_anim_time > 1) {
         eye_info.blink_percentage = 0;
+        eye_info.blink_next_time = Date.now() + eye_info.blink_interval;
     } else {
         eye_info.blink_percentage = Math.min(1, Math.sin((blink_anim_time + 0.75) * 2 * Math.PI)/2 + 0.5);
     }
