@@ -120,27 +120,68 @@ function resize_stage() {
 // create the eyes
 function create_eyes() {
 
+    // create the eye object
     let eye_info = {
         x: 0,
         y: 0, 
         width: rand_in_range(eye_min_width, eye_max_width), 
         height: rand_in_range(eye_min_height, eye_max_height),
-        shape: null,
-        blink_percentage: 0
+        shapes: {
+            group: null,
+            sclera: null,
+            iris: null
+        },
+        blink_percentage: 0,
+        blink_duration: 2000,
+        blink_next_time: Date.now() + 1000
     };
 
-    draw_eye(eye_info);
+    // define group to contain the eye shapes
+    let group = new Konva.Group();
+    layer.add(group);
+    eye_info.shapes.group = group;
+
+    // create the eye objects
+
+    let sclera = new Konva.Shape({
+        fill: "white",
+        sceneFunc: null,
+        clipFunc: null
+    });
+    group.add(sclera);
+    eye_info.shapes.sclera = sclera;
+
+    let iris = new Konva.Circle({
+        x: eye_info.x, 
+        y: eye_info.y, 
+        radius: eye_info.height/2 * eye_iris_ratio,
+        fill: "black"
+    }) 
+    group.add(iris);
+    eye_info.shapes.iris = iris;
+    
+    // utilize the final eye object
+    eyes.push(eye_info);
+    update_eye_shape(eye_info);
 }
 
 
 // draw a given eye object
-function draw_eye(eye_info) {
+function update_eye_shape(eye_info) {
+    
+    // calculate blink animation state
+    let blink_anim_time = Math.max((Date.now() - eye_info.blink_next_time) / eye_info.blink_duration, 0);
+    if (blink_anim_time > 1) {
+        eye_info.blink_percentage = 0;
+    } else {
+        eye_info.blink_percentage = Math.min(1, Math.sin((blink_anim_time + 0.75) * 2 * Math.PI)/2 + 0.5);
+    }
 
     // calculate eye bounding box
     let left = {x: eye_info.x-eye_info.width/2, y:eye_info.y};
     let right = {x: eye_info.x+eye_info.width/2, y:eye_info.y};
-    let up = {x: eye_info.x, y: eye_info.y-eye_info.height/2};
-    let down = {x: eye_info.x, y: eye_info.y+eye_info.height/2};
+    let up = {x: eye_info.x, y: (eye_info.y-eye_info.height/2) + eye_info.height/2*eye_info.blink_percentage};
+    let down = {x: eye_info.x, y: (eye_info.y+eye_info.height/2) - eye_info.height/2*eye_info.blink_percentage};
     let up_left = {x: eye_info.x*eye_horz_center_weight + left.x*eye_horz_edge_weight, y: eye_info.y*eye_vert_center_weight + up.y*eye_vert_edge_weight};
     let up_right = {x: eye_info.x*eye_horz_center_weight + right.x*eye_horz_edge_weight, y: eye_info.y*eye_vert_center_weight + up.y*eye_vert_edge_weight};
     let down_left = {x: eye_info.x*eye_horz_center_weight + left.x*eye_horz_edge_weight, y: eye_info.y*eye_vert_center_weight + down.y*eye_vert_edge_weight};
@@ -174,36 +215,17 @@ function draw_eye(eye_info) {
             left.x, 
             left.y
         );
-        ctx.quadraticCurveTo(
-            up_left.x, 
-            up_left.y, 
-            up.x, 
-            up.y
-        );
+        // ctx.quadraticCurveTo(
+        //     up_left.x, 
+        //     up_left.y, 
+        //     up.x, 
+        //     up.y
+        // );
         ctx.fillStrokeShape(shape);
     };
 
-    // define group to contain the eye shapes
-    let group = new Konva.Group();
-    layer.add(group);
-    eye_info.shape = group;
-
-    // create the eye objects
-
-    let sclera = new Konva.Shape({
-        fill: "white",
-        sceneFunc: shape_func,
-        clipFunc: shape_func
-    });
-    group.add(sclera);
-
-    let iris = new Konva.Circle({
-        x: eye_info.x, 
-        y: eye_info.y, 
-        radius: eye_info.height/2 * eye_iris_ratio,
-        fill: "black"
-    }) 
-    group.add(iris);
+    eye_info.shapes.sclera.sceneFunc(shape_func);
+    // eye_info.shapes.group.clipFunc(shape_func);
 }
 
 
@@ -215,6 +237,12 @@ function animate() {
         let time = frame.time;
         let diff = frame.timeDiff;
         let frame_rate = frame.frameRate;
+
+        for (let ei = 0; ei < eyes.length; ei++) {
+            let eye = eyes[ei];
+
+            update_eye_shape(eye);
+        }
 
     });
     
@@ -369,7 +397,4 @@ function zooming_stage_wheel(e) {
         y: pointer.y - stage_coords.y * new_scale,
     };
     stage.position(new_pos);
-
-    // update the orbit tracer size
-    update_tracer_size();
 };
