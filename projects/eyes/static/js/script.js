@@ -17,10 +17,12 @@ let eye_padding = 5;
 let eye_look_radius_ratio = 0.25;
 let eye_iris_size_ratio = 0.8;
 let eye_iris_move_speed = 1;
+let eye_iris_should_follow_cursor = true;
 let eye_horz_edge_weight = 0.5;
 let eye_vert_edge_weight = 1;
 let eye_horz_center_weight = 1 - eye_horz_edge_weight;
 let eye_vert_center_weight = 1 - eye_vert_edge_weight;
+let eye_size_scale = 1;
 let eye_min_width = 50;
 let eye_max_width = 100;
 let eye_min_height = 20;
@@ -141,8 +143,8 @@ function create_eye() {
 
     let x = 0; 
     let y = 0; 
-    let width = rand_in_range(eye_min_width, eye_max_width);
-    let height = rand_in_range(eye_min_height, eye_max_height);
+    let width = rand_in_range(eye_min_width * eye_size_scale, eye_max_width * eye_size_scale);
+    let height = rand_in_range(eye_min_height * eye_size_scale, eye_max_height * eye_size_scale);
 
     let found_eye_placement = false;
 
@@ -313,7 +315,7 @@ function update_eye_shape(eye_info) {
     let iris_target_pos = center;
 
     // check if eye is within look radius 
-    if (calc_dist(center, pointer_stage_coords) < Math.max(stage.width(), stage.height()) * eye_look_radius_ratio) {
+    if (eye_iris_should_follow_cursor && calc_dist(center, pointer_stage_coords) < Math.max(stage.width(), stage.height()) * eye_look_radius_ratio) {
         
         // calculate bounding rhombus lines
         let bounding_rhom = [[left, up], [up, right], [right, down], [down, left]];
