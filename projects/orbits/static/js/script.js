@@ -2,7 +2,6 @@
 let stage = null;
 let tracer_layer = null;
 let body_layer = null;
-let bodies = [];
 let anim = null;
 
 let stage_center = null;
@@ -19,10 +18,20 @@ let time_scale = 10;
 // gravitational constant
 let g = 0.00000001;
 
-// store planets
-let planets = [
+let ship_accel = 0.0001;
+let ship_rotation_speed = 1;
 
-];
+// track the bodies
+let ship = null;
+let bodies = [];
+
+// track pressed keys
+let key_map = {};
+let on_key = function (e) {
+    key_map[e.code] = e.type === "keydown"
+};
+document.addEventListener("keydown", on_key, false);
+document.addEventListener("keyup", on_key, false);
 
 // define colors
 let tracer_color = "gray";
@@ -169,7 +178,51 @@ function execute_physics_step() {
             body1.tracer_shape.points(flatten_points(body1.tracer_points));
         }
     }
+
+    // update the ship position
+    update_ship();
 }
+
+
+// animate the ship based on held keys
+function update_ship() {
+
+    if (ship === null) {
+        return;
+    }
+
+    // let speed = 0;
+    let speed = ship_accel;
+    let rotation_diff = 0;
+    let accel = {x:0, y:0};
+    
+    
+    if (key_map["KeyW"] || key_map["ArrowUp"]) {
+        // speed = ship_accel;
+        accel = calc_point_add(accel, {x:0, y:-1});
+    }
+    if (key_map["KeyS"] || key_map["ArrowDown"]) {
+        // speed = -1 * ship_accel;
+        accel = calc_point_add(accel, {x:0, y:1});
+    }
+    if (key_map["KeyA"] || key_map["ArrowLeft"]) {
+        // rotation_diff = ship_rotation_speed % (Math.PI * 2);
+        accel = calc_point_add(accel, {x:-1, y:0});
+    }
+    if (key_map["KeyD"] || key_map["ArrowRight"]) {
+        // rotation_diff = -1 * (ship_rotation_speed % (Math.PI * 2));
+        accel = calc_point_add(accel, {x:1, y:0});
+    }
+    accel = calc_point_mult_scalar(accel, speed);
+    // let accel = calc_point_mult_scalar({x:Math.cos(ship.rotation), y:Math.sin(ship.rotation)}, speed);
+
+    // calculate new velocity and position for the body
+    ship.velocity = calc_point_add(ship.velocity, calc_point_mult_scalar(accel, time_scale));
+    ship.position = calc_point_add(ship.position, calc_point_mult_scalar(ship.velocity, time_scale));
+    ship.shape.position(ship.position);
+    ship.rotation += rotation_diff;
+}
+
 
 // animate circles
 function animate() {
@@ -344,6 +397,38 @@ function create_solar_system() {
         clockwise: true,
         starting_percent: 0
     });
+
+    ship = create_body({
+        mass: 1, 
+        affected_by_gravity: true,
+        influences_gravity: false,
+    }, {
+        radius: 2,
+        fill: "red", 
+    }, {
+        body: sun,
+        perigee_distance: 1.5,
+        apogee_distance: 1.5,
+        angle: 0, 
+        clockwise: true,
+        starting_percent: 0
+    });
+
+    // let moon = create_body({
+    //     mass: 1, 
+    //     affected_by_gravity: true,
+    //     influences_gravity: true,
+    // }, {
+    //     radius: 0.1868,
+    //     fill: "#C0B7A8", 
+    // }, {
+    //     body: earth,
+    //     perigee_distance: 0.25,
+    //     apogee_distance: 0.25,
+    //     angle: 0, 
+    //     clockwise: true,
+    //     starting_percent: 0
+    // });
 }
 
 
@@ -356,6 +441,7 @@ function create_body(body_info, display_info, orbit_info=null) {
     let velocity = "velocity" in body_info ? body_info.velocity : {x:0, y:0};
     let affected_by_gravity = "affected_by_gravity" in body_info ? body_info.affected_by_gravity : true;
     let influences_gravity = "influences_gravity" in body_info ? body_info.influences_gravity : true;
+    let rotation = "rotation" in body_info ? body_info.rotation : 0;
 
     // get display info values if they are present
     let radius = "radius" in display_info ? display_info.radius : 10;
@@ -372,7 +458,8 @@ function create_body(body_info, display_info, orbit_info=null) {
         influences_gravity: influences_gravity,
         shape: null,
         tracer_points: [],
-        tracer_shape: null
+        tracer_shape: null,
+        rotation: rotation
     };
 
     if (orbit_info != null && orbit_info.body != null) {
