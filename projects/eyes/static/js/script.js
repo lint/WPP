@@ -30,12 +30,22 @@ const pan_min_dist = 5;
 let can_pan_enabled = true;
 let can_zoom_enabled = true;
 
+// define eye shape variables
+let eye_horz_edge_weight = 0.5;
+let eye_vert_edge_weight = 1;
+let eye_horz_center_weight = 1 - eye_horz_edge_weight;
+let eye_vert_center_weight = 1 - eye_vert_edge_weight;
+let eye_iris_ratio = 0.9;
+
 
 // callback for when DOM is loaded
 document.addEventListener("DOMContentLoaded", function() { 
 
     // setup the stage
     create_stage();
+
+    // draw initial elements
+    create_eyes();
 
     // animate the objects
     animate();
@@ -98,8 +108,98 @@ function resize_stage() {
     let parent = stage_container.parentElement;
 
     // get necessary dimensions of the container cells
-    stage.width = parent.offsetWidth;
-    stage.height = parent.offsetHeight;
+    stage.width(parent.offsetWidth);
+    stage.height(parent.offsetHeight);
+}
+
+
+// create the eyes
+function create_eyes() {
+
+    let eye_info = {
+        x: 0,
+        y: 0, 
+        width: 200, 
+        height: 100,
+        shape: null,
+        blink_percentage: 0
+    };
+
+    draw_eye(eye_info);
+}
+
+
+// draw a given eye object
+function draw_eye(eye_info) {
+
+    // calculate eye bounding box
+    let left = {x: eye_info.x-eye_info.width/2, y:eye_info.y};
+    let right = {x: eye_info.x+eye_info.width/2, y:eye_info.y};
+    let up = {x: eye_info.x, y: eye_info.y-eye_info.height/2};
+    let down = {x: eye_info.x, y: eye_info.y+eye_info.height/2};
+    let up_left = {x: eye_info.x*eye_horz_center_weight + left.x*eye_horz_edge_weight, y: eye_info.y*eye_vert_center_weight + up.y*eye_vert_edge_weight};
+    let up_right = {x: eye_info.x*eye_horz_center_weight + right.x*eye_horz_edge_weight, y: eye_info.y*eye_vert_center_weight + up.y*eye_vert_edge_weight};
+    let down_left = {x: eye_info.x*eye_horz_center_weight + left.x*eye_horz_edge_weight, y: eye_info.y*eye_vert_center_weight + down.y*eye_vert_edge_weight};
+    let down_right = {x: eye_info.x*eye_horz_center_weight + right.x*eye_horz_edge_weight, y: eye_info.y*eye_vert_center_weight + down.y*eye_vert_edge_weight};
+
+    // define a function that creates the eye shape
+    let shape_func = (ctx, shape) => {
+        ctx.beginPath();
+        ctx.moveTo(left.x, left.y);
+        ctx.quadraticCurveTo(
+            up_left.x, 
+            up_left.y, 
+            up.x, 
+            up.y
+        );
+        ctx.quadraticCurveTo(
+            up_right.x, 
+            up_right.y, 
+            right.x, 
+            right.y
+        );
+        ctx.quadraticCurveTo(
+            down_right.x, 
+            down_right.y, 
+            down.x, 
+            down.y
+        );
+        ctx.quadraticCurveTo(
+            down_left.x, 
+            down_left.y, 
+            left.x, 
+            left.y
+        );
+        ctx.quadraticCurveTo(
+            up_left.x, 
+            up_left.y, 
+            up.x, 
+            up.y
+        );
+        ctx.fillStrokeShape(shape);
+    };
+
+    // define group to contain the eye shapes
+    let group = new Konva.Group();
+    layer.add(group);
+    eye_info.shape = group;
+
+    // create the eye objects
+
+    let sclera = new Konva.Shape({
+        fill: "white",
+        sceneFunc: shape_func,
+        clipFunc: shape_func
+    });
+    group.add(sclera);
+
+    let iris = new Konva.Circle({
+        x: eye_info.x, 
+        y: eye_info.y, 
+        radius: eye_info.height/2 * eye_iris_ratio,
+        fill: "black"
+    }) 
+    group.add(iris);
 }
 
 
