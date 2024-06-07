@@ -36,6 +36,10 @@ let eye_vert_edge_weight = 1;
 let eye_horz_center_weight = 1 - eye_horz_edge_weight;
 let eye_vert_center_weight = 1 - eye_vert_edge_weight;
 let eye_iris_ratio = 0.9;
+let eye_min_height = 50;
+let eye_max_height = 100;
+let eye_min_width = 100;
+let eye_max_width = 200;
 
 
 // callback for when DOM is loaded
@@ -119,8 +123,8 @@ function create_eyes() {
     let eye_info = {
         x: 0,
         y: 0, 
-        width: 200, 
-        height: 100,
+        width: rand_in_range(eye_min_width, eye_max_width), 
+        height: rand_in_range(eye_min_height, eye_max_height),
         shape: null,
         blink_percentage: 0
     };
