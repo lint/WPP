@@ -10,6 +10,23 @@ let tick = 0;
 
 // track the eyes
 let eyes = [];
+let num_eyes = 1000;
+
+// define eye shape variables
+let eye_padding = 5;
+let eye_horz_edge_weight = 0.5;
+let eye_vert_edge_weight = 1;
+let eye_horz_center_weight = 1 - eye_horz_edge_weight;
+let eye_vert_center_weight = 1 - eye_vert_edge_weight;
+let eye_iris_ratio = 0.8;
+let eye_min_width = 50;
+let eye_max_width = 100;
+let eye_min_height = 20;
+let eye_max_height = 35;
+let eye_min_blink_interval = 60000;
+let eye_max_blink_interval = 100000;
+let eye_min_blink_duration = 300;
+let eye_max_blink_duration = 600;
 
 // track pressed keys
 let key_map = {};
@@ -29,21 +46,6 @@ const pan_min_dist = 5;
 
 let can_pan_enabled = true;
 let can_zoom_enabled = true;
-
-// define eye shape variables
-let eye_horz_edge_weight = 0.5;
-let eye_vert_edge_weight = 1;
-let eye_horz_center_weight = 1 - eye_horz_edge_weight;
-let eye_vert_center_weight = 1 - eye_vert_edge_weight;
-let eye_iris_ratio = 0.9;
-let eye_min_height = 50;
-let eye_max_height = 100;
-let eye_min_width = 150;
-let eye_max_width = 200;
-let eye_min_blink_interval = 1000;
-let eye_max_blink_interval = 10000;
-let eye_min_blink_duration = 300;
-let eye_max_blink_duration = 600;
 
 
 // callback for when DOM is loaded
@@ -124,12 +126,68 @@ function resize_stage() {
 // create the eyes
 function create_eyes() {
 
+    for (let ei = 0; ei < num_eyes; ei++) {
+        create_eye();
+    }
+}
+
+
+// create a new eye
+function create_eye() {
+
+    let eye_placement_tries = 100;
+
+    let x = 0; 
+    let y = 0; 
+    let width = rand_in_range(eye_min_width, eye_max_width);
+    let height = rand_in_range(eye_min_height, eye_max_height);
+
+    let found_eye_placement = false;
+
+    // try to place the eye on the stage
+    for (let i = 0; i < eye_placement_tries; i++) {
+        
+        let down_left = {x: x - width/2 - eye_padding, y: y + height/2 + eye_padding};
+        let up_right  = {x: x + width/2 + eye_padding, y: y - height/2 - eye_padding };
+
+        let intersects = false;
+
+        // check if it intersects with any other eyes
+        for (let ei = 0; ei < eyes.length; ei++) {
+            let eye = eyes[ei];
+            let eye_down_left = {x: eye.x - eye.width/2 - eye_padding, y: eye.y + eye.height/2 + eye_padding};
+            let eye_up_right  = {x: eye.x + eye.width/2 + eye_padding, y: eye.y - eye.height/2 - eye_padding};
+
+            // compare bounding rectangles of new eye and current eye
+            if ((down_left.x < eye_up_right.x) && (eye_down_left.x < up_right.x) && (down_left.y > eye_up_right.y) && (eye_down_left.y > up_right.y)) {
+                intersects = true;
+                break;
+            }
+        }
+
+        // break if no intersections found with other 
+        if (!intersects) {
+            found_eye_placement = true;
+            break;
+        }
+
+        // regenerate coordinates
+        x = rand_in_range(-stage.x(), stage.x());
+        y = rand_in_range(-stage.y(), stage.y());
+    }
+
+    if (!found_eye_placement) {
+        return;
+    }
+
+    let blink_interval = rand_in_range(eye_min_blink_interval, eye_max_blink_interval);
+    
     // create the eye object
     let eye_info = {
-        x: 0,
-        y: 0, 
-        width: rand_in_range(eye_min_width, eye_max_width), 
-        height: rand_in_range(eye_min_height, eye_max_height),
+        x: x,
+        y: y, 
+        width: width, 
+        height: height,
         shapes: {
             group: null,
             sclera: null,
@@ -137,8 +195,8 @@ function create_eyes() {
         },
         blink_percentage: 0,
         blink_duration: rand_in_range(eye_min_blink_duration, eye_max_blink_duration),
-        blink_next_time: Date.now() + rand_in_range(eye_min_blink_interval, eye_max_blink_interval),
-        blink_interval: rand_in_range(eye_min_blink_interval, eye_max_blink_interval)
+        blink_next_time: Date.now() + blink_interval * Math.random() * 5,
+        blink_interval: blink_interval
     };
 
     // define group to contain the eye shapes
